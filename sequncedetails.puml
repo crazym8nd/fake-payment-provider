@@ -1,0 +1,33 @@
+@startuml
+
+autonumber
+actor merchant
+box fake-payment-provider
+participant PaymentController as pc
+participant transactionService as ts
+participant accountService as acs
+participant cardService as cs
+participant webhookService as ws
+end box
+database database as db
+
+merchant -> pc : GET api/v1/payments/transaction/{TransactionId}/details
+pc -> db : authenticate
+alt #LightBlue Successful case
+    db -> pc: Authentication Accepted
+else #Pink Failure
+    db --> pc: Authentication Rejected
+    pc --> merchant : 400 No Authentication
+end
+pc -> ts : get transaction by id
+ts -> db : get transaction by id
+alt #LightBlue Successful case
+    db -> ts : return transaction by id
+    ts -> pc : return transaction by id
+    pc -> merchant : OK 200  transaction by id
+else #Pink Failure
+    db --> ts : ERROR returning transaction by id
+    ts --> pc : ERROR returning transaction by id
+    pc --> merchant : 400 ERROR msg
+end
+@enduml

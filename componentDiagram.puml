@@ -1,0 +1,27 @@
+@startuml
+interface API
+[merchant] -right-> API
+component paymentController {
+         component [cardService]
+         component [transactionService]
+         component [cardService]
+         component [accountService]
+         component [webhookService]
+        component [authentication]
+}
+database "postgres"
+
+API -> [paymentController] : TransactionRequest
+API ..> [authentication] : headers
+authentication --> "postgres"
+paymentController-> [transactionService]
+[transactionService] ---> [webhookService] : manage webhook
+[transactionService] ---> [cardService]: manage card
+[transactionService] ---> [accountService] : manage account
+
+[transactionService] -right-> "postgres"
+[accountService] -right-> "postgres"
+[cardService] -right->  "postgres"
+[webhookService] -right->  "postgres"
+[transactionService] -right->  "postgres"
+@enduml
