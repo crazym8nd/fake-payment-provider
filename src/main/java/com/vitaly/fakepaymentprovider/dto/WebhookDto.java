@@ -1,29 +1,17 @@
-package com.vitaly.fakepaymentprovider.entity;
-
+package com.vitaly.fakepaymentprovider.dto;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.domain.Persistable;
-import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 @Data
-@Builder(toBuilder = true)
-@NoArgsConstructor
-@AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-@Table("webhooks")
-public class Webhook implements Persistable<Long> {
-
-    @Id
+@Builder(toBuilder = true)
+public class WebhookDto {
     private Long id;
     private String transactionUuid;
     private Long transactionAttempt;
@@ -37,9 +25,4 @@ public class Webhook implements Persistable<Long> {
     private String createdBy;
     private String updatedBy;
     private Status status;
-
-    @Override
-    public boolean isNew() {
-        return Objects.isNull(id);
-    }
 }

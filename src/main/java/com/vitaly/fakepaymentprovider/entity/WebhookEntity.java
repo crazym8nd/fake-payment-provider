@@ -1,9 +1,8 @@
 package com.vitaly.fakepaymentprovider.entity;
 
+
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import com.vitaly.fakepaymentprovider.entity.util.Currency;
-import com.vitaly.fakepaymentprovider.entity.util.Language;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,7 +12,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -22,17 +20,18 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-@Table("transactions")
-public class Transaction implements Persistable<String> {
+@Table("webhooks")
+public class WebhookEntity implements Persistable<Long> {
+
     @Id
-    private String uuid;
-    private String paymentMethod;
-    private BigDecimal amount;
-    private Currency currency;
-    private Language language;
-    private String notificationUrl;
-    private Long accountId;
-    private Long cardId;
+    private Long id;
+    private String transactionUuid;
+    private Long transactionAttempt;
+    private String urlRequest;
+    private String bodyRequest;
+    private String message;
+    private String bodyResponse;
+    private String statusResponse;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
@@ -40,14 +39,7 @@ public class Transaction implements Persistable<String> {
     private Status status;
 
     @Override
-    public String getId() {
-        return uuid;
-    }
-    @Override
     public boolean isNew() {
-        return Objects.isNull(uuid);
+        return Objects.isNull(id);
     }
-
-
-
 }

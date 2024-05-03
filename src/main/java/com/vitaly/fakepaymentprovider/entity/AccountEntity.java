@@ -2,6 +2,7 @@ package com.vitaly.fakepaymentprovider.entity;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.vitaly.fakepaymentprovider.entity.util.Currency;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,6 +12,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -19,20 +21,18 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-@Table("customers")
-public class Customer implements Persistable<Long> {
+@Table("accounts")
+public class AccountEntity implements Persistable<Long> {
     @Id
     private Long id;
-    private String firstName;
-    private String lastName;
-    private String country;
-    private Long cardId;
+    private String merchantId;
+    private Currency currency;
+    private BigDecimal amount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
     private String updatedBy;
     private Status status;
-
 
     @Override
     public boolean isNew() {

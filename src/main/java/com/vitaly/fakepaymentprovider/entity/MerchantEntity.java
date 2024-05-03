@@ -23,7 +23,7 @@ import java.util.Objects;
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Table("merchants")
-public class Merchant implements Persistable<String> {
+public class MerchantEntity implements Persistable<String> {
 
     @Id
     private String merchantId;
@@ -35,7 +35,7 @@ public class Merchant implements Persistable<String> {
     private Status status;
 
     @Transient
-    private List<Account> accounts;
+    private List<AccountEntity> accountEntities;
 
     @Override
     public String getId() {
