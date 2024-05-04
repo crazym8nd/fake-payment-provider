@@ -39,10 +39,25 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Mono<TransactionEntity> save(TransactionEntity transactionEntity) {
-        log.info("Saving transaction{}", transactionEntity);
+        log.warn("Saving transaction{}", transactionEntity);
 
-        return transactionRepository.save(transactionEntity)
-                .doOnSuccess(savedTransaction -> log.info("Transaction saved successfully: {}", savedTransaction))
+        return transactionRepository.save(
+                transactionEntity.toBuilder()
+                        .paymentMethod(transactionEntity.getPaymentMethod())
+                        .amount(transactionEntity.getAmount())
+                        .currency(transactionEntity.getCurrency())
+                        .language(transactionEntity.getLanguage())
+                        .notificationUrl(transactionEntity.getNotificationUrl())
+                        .cardData(transactionEntity.getCardData())
+                        .customer(transactionEntity.getCustomer())
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .createdBy("SYSTEM")
+                        .updatedBy("SYSTEM")
+                        .status(Status.IN_PROGRESS)
+                        .build()
+        )
+                .doOnSuccess(savedTransaction -> log.warn("Transaction saved successfully: {}", savedTransaction))
                 .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
     }
 

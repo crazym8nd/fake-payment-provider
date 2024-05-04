@@ -12,3 +12,6 @@ spring:
     url: r2dbc:postgresql://localhost:5432/postgres
     username: postgres
     password: password
+logging:
+  level:
+    root: warn

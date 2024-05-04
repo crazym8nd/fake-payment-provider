@@ -1,6 +1,6 @@
 package com.vitaly.fakepaymentprovider.rest;
 
-import com.vitaly.fakepaymentprovider.dto.TransactionDto;
+import com.vitaly.fakepaymentprovider.dto.RequestTransactionDto;
 import com.vitaly.fakepaymentprovider.mapper.TransactionMapper;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -21,20 +21,17 @@ public class PaymentsControllerV1 {
     private final TransactionMapper transactionMapper;
 
     @GetMapping("/transaction/list")
-    public Mono<ResponseEntity<Flux<TransactionDto>>> getAllTransactionsList(){
-        Flux<TransactionDto> transactionsflux;
-
+    public Mono<ResponseEntity<Flux<RequestTransactionDto>>> getAllTransactionsList(){
+        Flux<RequestTransactionDto> transactionsflux;
         transactionsflux = transactionService.getAll()
                 .map(transactionMapper::mapToDto);
         return Mono.just(ResponseEntity.ok(transactionsflux));
     }
+
     @PostMapping("/topups/")
-    public Mono<ResponseEntity<TransactionDto>> topUpTransaction(@RequestBody TransactionDto transactionDto){
-        log.info("Received topUpTransaction request: {}", transactionDto);
-        return transactionService.save(transactionMapper.mapFromDto(transactionDto))
-                .map(savedTransaction -> {
-                    log.info("Transaction saved successfully: {}", savedTransaction);
-                    return new ResponseEntity<>(transactionMapper.mapToDto(savedTransaction), HttpStatus.CREATED);})
+    public Mono<ResponseEntity<RequestTransactionDto>> topUpTransaction(@RequestBody RequestTransactionDto requestTransactionDto){
+        return transactionService.save(transactionMapper.mapFromDto(requestTransactionDto))
+                .map(savedTransaction -> new ResponseEntity<>(transactionMapper.mapToDto(savedTransaction), HttpStatus.CREATED))
                 .defaultIfEmpty(new ResponseEntity<>(HttpStatus.BAD_REQUEST))
                 .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
     }
