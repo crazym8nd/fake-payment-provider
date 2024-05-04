@@ -21,7 +21,6 @@ import java.util.Objects;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Table("merchants")
 public class MerchantEntity implements Persistable<String> {
 

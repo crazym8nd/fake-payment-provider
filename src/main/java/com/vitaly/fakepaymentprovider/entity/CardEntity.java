@@ -20,27 +20,23 @@ import java.util.Objects;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Table("cards")
 public class CardEntity implements Persistable<Long> {
 
     @Id
     private Long id;
     private String cardNumber;
-    private LocalDate expirationDate;
+    private String expDate;
     private String cvv;
-    private Long customerId;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
     private String updatedBy;
     private Status status;
 
-    @Transient
-    private CustomerEntity customerEntity;
-
     @Override
     public boolean isNew() {
-        return Objects.isNull(id);
+        return this.id == null;
     }
 }

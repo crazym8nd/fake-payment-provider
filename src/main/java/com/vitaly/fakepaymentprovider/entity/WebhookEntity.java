@@ -19,7 +19,6 @@ import java.util.Objects;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Table("webhooks")
 public class WebhookEntity implements Persistable<Long> {
 

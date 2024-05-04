@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS transactions (
                                             currency VARCHAR(25) NOT NULL,
                                             language VARCHAR(25) NOT NULL,
                                             notification_url VARCHAR(256) NOT NULL,
+                                            card_number VARCHAR(16) NOT NULL,
                                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                             created_by VARCHAR(256) NOT NULL,
@@ -73,5 +74,8 @@ ALTER TABLE accounts ADD CONSTRAINT accounts_merchant_id_fk
                                     REFERENCES merchants(id)
 ;
 
-ALTER TABLE transactions ALTER COLUMN uuid SET DEFAULT uuid_generate_v4();
+ALTER TABLE transactions  ADD CONSTRAINT transactions_card_id_fk
+                                        FOREIGN KEY (card_number)
+                                        REFERENCES cards(card_number),
+                         ALTER COLUMN uuid SET DEFAULT uuid_generate_v4();
 ;

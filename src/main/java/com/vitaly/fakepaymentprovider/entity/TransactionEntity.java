@@ -10,29 +10,33 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.UUID;
 
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Table("transactions")
-public class TransactionEntity implements Persistable<String> {
+public class TransactionEntity implements Persistable<UUID> {
     @Id
-    private String uuid;
+    private UUID uuid;
     private String paymentMethod;
     private BigDecimal amount;
     private Currency currency;
     private Language language;
     private String notificationUrl;
-    private Long accountId;
-    private Long cardId;
+    @Transient
+    private CardEntity cardData;
+    @Transient
+    private CustomerEntity customer;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
@@ -40,12 +44,12 @@ public class TransactionEntity implements Persistable<String> {
     private Status status;
 
     @Override
-    public String getId() {
+    public UUID getId() {
         return uuid;
     }
     @Override
     public boolean isNew() {
-        return Objects.isNull(uuid);
+        return this.uuid == null;
     }
 
 

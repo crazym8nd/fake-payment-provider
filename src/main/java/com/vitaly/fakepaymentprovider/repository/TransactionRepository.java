@@ -6,8 +6,10 @@ import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import reactor.core.publisher.Mono;
 
-public interface TransactionRepository extends R2dbcRepository<TransactionEntity, String> {
+import java.util.UUID;
+
+public interface TransactionRepository extends R2dbcRepository<TransactionEntity, UUID> {
     @Modifying
     @Query("UPDATE transactions SET status = 'DELETED' WHERE id = :id")
-    Mono<Void> deleteById(String id);
+    Mono<Void> deleteById(UUID id);
 }

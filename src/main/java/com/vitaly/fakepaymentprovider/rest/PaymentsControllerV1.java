@@ -4,16 +4,17 @@ import com.vitaly.fakepaymentprovider.dto.TransactionDto;
 import com.vitaly.fakepaymentprovider.mapper.TransactionMapper;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/payments")
+@Slf4j
 public class PaymentsControllerV1 {
 
     private final TransactionService transactionService;
@@ -26,5 +27,15 @@ public class PaymentsControllerV1 {
         transactionsflux = transactionService.getAll()
                 .map(transactionMapper::mapToDto);
         return Mono.just(ResponseEntity.ok(transactionsflux));
+    }
+    @PostMapping("/topups/")
+    public Mono<ResponseEntity<TransactionDto>> topUpTransaction(@RequestBody TransactionDto transactionDto){
+        log.info("Received topUpTransaction request: {}", transactionDto);
+        return transactionService.save(transactionMapper.mapFromDto(transactionDto))
+                .map(savedTransaction -> {
+                    log.info("Transaction saved successfully: {}", savedTransaction);
+                    return new ResponseEntity<>(transactionMapper.mapToDto(savedTransaction), HttpStatus.CREATED);})
+                .defaultIfEmpty(new ResponseEntity<>(HttpStatus.BAD_REQUEST))
+                .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
     }
 }

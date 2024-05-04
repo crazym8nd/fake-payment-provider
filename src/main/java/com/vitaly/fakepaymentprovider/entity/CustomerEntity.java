@@ -18,7 +18,6 @@ import java.util.Objects;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Table("customers")
 public class CustomerEntity implements Persistable<Long> {
     @Id
@@ -26,7 +25,7 @@ public class CustomerEntity implements Persistable<Long> {
     private String firstName;
     private String lastName;
     private String country;
-    private Long cardId;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
@@ -36,6 +35,6 @@ public class CustomerEntity implements Persistable<Long> {
 
     @Override
     public boolean isNew() {
-        return Objects.isNull(id);
+        return this.id == null;
     }
 }

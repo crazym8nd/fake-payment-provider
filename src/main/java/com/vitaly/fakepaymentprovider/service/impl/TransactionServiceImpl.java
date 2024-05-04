@@ -11,6 +11,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public Mono<TransactionEntity> getById(String transactionId) {
+    public Mono<TransactionEntity> getById(UUID transactionId) {
         return transactionRepository.findById(transactionId);
     }
 
@@ -38,26 +39,15 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Mono<TransactionEntity> save(TransactionEntity transactionEntity) {
-        return transactionRepository.save(
-                transactionEntity.toBuilder()
-                        .paymentMethod(transactionEntity.getPaymentMethod())
-                        .amount(transactionEntity.getAmount())
-                        .currency(transactionEntity.getCurrency())
-                        .language(transactionEntity.getLanguage())
-                        .notificationUrl(transactionEntity.getNotificationUrl())
-                        .accountId(transactionEntity.getAccountId())
-                        .cardId(transactionEntity.getCardId())
-                        .createdAt(transactionEntity.getCreatedAt())
-                        .updatedAt(transactionEntity.getUpdatedAt())
-                        .createdBy(transactionEntity.getCreatedBy())
-                        .updatedBy(transactionEntity.getUpdatedBy())
-                        .status(Status.ACTIVE)
-                        .build()
-        );
+        log.info("Saving transaction{}", transactionEntity);
+
+        return transactionRepository.save(transactionEntity)
+                .doOnSuccess(savedTransaction -> log.info("Transaction saved successfully: {}", savedTransaction))
+                .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
     }
 
     @Override
-    public Mono<TransactionEntity> deleteById(String transactionId) {
+    public Mono<TransactionEntity> deleteById(UUID transactionId) {
         return transactionRepository.findById(transactionId)
                 .flatMap(trans -> transactionRepository.deleteById(trans.getId()).thenReturn(trans));
     }
