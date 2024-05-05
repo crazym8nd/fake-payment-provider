@@ -23,7 +23,7 @@ import java.util.UUID;
 @Table("transactions")
 public class TransactionEntity implements Persistable<UUID> {
     @Id
-    private UUID uuid;
+    private UUID transactionId;
     private String paymentMethod;
     private BigDecimal amount;
     private Currency currency;
@@ -42,11 +42,11 @@ public class TransactionEntity implements Persistable<UUID> {
 
     @Override
     public UUID getId() {
-        return uuid;
+        return transactionId;
     }
     @Override
     public boolean isNew() {
-        return this.uuid == null;
+        return this.transactionId == null;
     }
 
 

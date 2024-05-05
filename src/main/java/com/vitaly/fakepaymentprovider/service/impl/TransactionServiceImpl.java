@@ -26,6 +26,10 @@ public class TransactionServiceImpl implements TransactionService {
         return transactionRepository.findAll();
     }
 
+    public Flux<TransactionEntity> getAllByPeriod(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return transactionRepository.findAllByCreatedAtBetween(startDateTime, endDateTime);
+    }
+
     @Override
     public Mono<TransactionEntity> getById(UUID transactionId) {
         return transactionRepository.findById(transactionId);

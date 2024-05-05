@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS customers (
                                          status VARCHAR(256) DEFAULT 'IN_PROGRESS' NOT NULL
 );
 CREATE TABLE IF NOT EXISTS transactions (
-                                            uuid UUID PRIMARY KEY,
+                                            transaction_id UUID PRIMARY KEY,
                                             payment_method VARCHAR(25) NOT NULL,
                                             amount BIGINT NOT NULL,
                                             currency VARCHAR(25) NOT NULL,
@@ -73,5 +73,5 @@ ALTER TABLE accounts ADD CONSTRAINT accounts_merchant_id_fk
                                     REFERENCES merchants(id)
 ;
 
-ALTER TABLE transactions ALTER COLUMN uuid SET DEFAULT uuid_generate_v4();
+ALTER TABLE transactions ALTER COLUMN transaction_id SET DEFAULT uuid_generate_v4();
 ;
