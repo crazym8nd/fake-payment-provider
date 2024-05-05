@@ -14,4 +14,4 @@ spring:
     password: password
 logging:
   level:
-    root: warn
+    root: info

@@ -2,6 +2,7 @@ package com.vitaly.fakepaymentprovider.service.impl;
 
 import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
+import com.vitaly.fakepaymentprovider.exceptionhandling.TransactionRequestInvalidPaymentMethodException;
 import com.vitaly.fakepaymentprovider.repository.TransactionRepository;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -41,26 +42,29 @@ public class TransactionServiceImpl implements TransactionService {
     public Mono<TransactionEntity> save(TransactionEntity transactionEntity) {
         log.warn("Saving transaction{}", transactionEntity);
 
-        return transactionRepository.save(
-                transactionEntity.toBuilder()
-                        .paymentMethod(transactionEntity.getPaymentMethod())
-                        .amount(transactionEntity.getAmount())
-                        .currency(transactionEntity.getCurrency())
-                        .language(transactionEntity.getLanguage())
-                        .notificationUrl(transactionEntity.getNotificationUrl())
-                        .cardData(transactionEntity.getCardData())
-                        .customer(transactionEntity.getCustomer())
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
-                        .createdBy("SYSTEM")
-                        .updatedBy("SYSTEM")
-                        .status(Status.IN_PROGRESS)
-                        .build()
-        )
-                .doOnSuccess(savedTransaction -> log.warn("Transaction saved successfully: {}", savedTransaction))
-                .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
+        if (!transactionEntity.getPaymentMethod().equals("CARD")) {
+            return Mono.error(new TransactionRequestInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
+        } else {
+            return transactionRepository.save(
+                            transactionEntity.toBuilder()
+                                    .paymentMethod(transactionEntity.getPaymentMethod())
+                                    .amount(transactionEntity.getAmount())
+                                    .currency(transactionEntity.getCurrency())
+                                    .language(transactionEntity.getLanguage())
+                                    .notificationUrl(transactionEntity.getNotificationUrl())
+                                    .cardData(transactionEntity.getCardData())
+                                    .customer(transactionEntity.getCustomer())
+                                    .createdAt(LocalDateTime.now())
+                                    .updatedAt(LocalDateTime.now())
+                                    .createdBy("SYSTEM")
+                                    .updatedBy("SYSTEM")
+                                    .status(Status.IN_PROGRESS)
+                                    .build()
+                    )
+                    .doOnSuccess(savedTransaction -> log.warn("Transaction saved successfully: {}", savedTransaction))
+                    .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
+        }
     }
-
     @Override
     public Mono<TransactionEntity> deleteById(UUID transactionId) {
         return transactionRepository.findById(transactionId)
