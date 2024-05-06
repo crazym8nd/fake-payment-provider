@@ -1,6 +1,6 @@
 package com.vitaly.fakepaymentprovider.rest;
 
-import com.vitaly.fakepaymentprovider.dto.ResponseTransactionDto;
+import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTopupTransactionDto;
 import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import com.vitaly.fakepaymentprovider.util.TransactionDataUtils;
@@ -51,11 +51,11 @@ class PaymentsControllerV1IntegrationTests {
                 .exchange();
         //then
         result.expectStatus().isOk()
-                .expectBody(ResponseTransactionDto.class)
+                .expectBody(ResponseTopupTransactionDto.class)
                 .consumeWith(response -> {
-                    ResponseTransactionDto responseTransactionDtoDetails = response.getResponseBody();
-                    assertNotNull(responseTransactionDtoDetails);
-                    assertEquals(responseTransactionDtoDetails.getTransactionId(),transactionId);
+                    ResponseTopupTransactionDto responseTopupTransactionDtoDetails = response.getResponseBody();
+                    assertNotNull(responseTopupTransactionDtoDetails);
+                    assertEquals(responseTopupTransactionDtoDetails.getTransactionId(),transactionId);
                 });
     }
 

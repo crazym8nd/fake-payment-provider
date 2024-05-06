@@ -1,15 +1,18 @@
 package com.vitaly.fakepaymentprovider.mapper;
 
-import com.vitaly.fakepaymentprovider.dto.RequestTransactionDto;
-import com.vitaly.fakepaymentprovider.dto.ResponseTransactionDto;
+import com.vitaly.fakepaymentprovider.dto.requestdto.RequestPayoutTransactionDto;
+import com.vitaly.fakepaymentprovider.dto.requestdto.RequestTopupTransactionDto;
+import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTopupTransactionDto;
 import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import org.mapstruct.InheritInverseConfiguration;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring", uses = {CustomerMapper.class, CardMapper.class})
 public interface TransactionMapper {
-    ResponseTransactionDto mapToResponseDto(TransactionEntity transactionEntity);
+    ResponseTopupTransactionDto mapToResponseTopupDto(TransactionEntity transactionEntity);
 
     @InheritInverseConfiguration
-    TransactionEntity mapFromRequestDto(RequestTransactionDto requestTransactionDto);
+    TransactionEntity mapFromRequestTopupDto(RequestTopupTransactionDto requestTopupTransactionDto);
+
+    TransactionEntity mapFromRequestPayoutDto(RequestPayoutTransactionDto requestPayoutTransactionDto);
 }

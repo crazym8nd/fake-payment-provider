@@ -1,7 +1,8 @@
-package com.vitaly.fakepaymentprovider.dto;
+package com.vitaly.fakepaymentprovider.dto.responsedto;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.vitaly.fakepaymentprovider.dto.CustomerDto;
 import com.vitaly.fakepaymentprovider.entity.util.Currency;
 import com.vitaly.fakepaymentprovider.entity.util.Language;
 import lombok.Builder;
@@ -14,14 +15,14 @@ import java.util.UUID;
 @Data
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Builder(toBuilder = true)
-public class ResponseTransactionDto {
+public class ResponseTopupTransactionDto {
     private UUID transactionId;
     private String paymentMethod;
     private BigDecimal amount;
     private Currency currency;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private CardDataDto cardData;
+    private ResponseCardDataDto cardData;
     private Language language;
     private String notificationUrl;
     private CustomerDto customer;

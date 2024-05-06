@@ -1,11 +1,13 @@
 package com.vitaly.fakepaymentprovider.rest;
 
-import com.vitaly.fakepaymentprovider.dto.RequestTransactionDto;
-import com.vitaly.fakepaymentprovider.dto.ResponseTransactionDto;
+import com.vitaly.fakepaymentprovider.dto.requestdto.RequestPayoutTransactionDto;
+import com.vitaly.fakepaymentprovider.dto.requestdto.RequestTopupTransactionDto;
+import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTopupTransactionDto;
 import com.vitaly.fakepaymentprovider.mapper.TransactionMapper;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -27,9 +29,9 @@ public class PaymentsControllerV1 {
     private final TransactionMapper transactionMapper;
 
     @PostMapping("/topups/")
-    public Mono<ResponseEntity<Map<String, String>>> topUpTransaction(@RequestBody RequestTransactionDto requestTransactionDto){
+    public Mono<ResponseEntity<Map<String, String>>> topUpTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto){
         return transactionService.save(
-                        transactionMapper.mapFromRequestDto(requestTransactionDto))
+                        transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto))
                 .map(savedTransaction -> {
                     Map<String, String> response = new HashMap<>();
                     response.put("transaction_id", savedTransaction.getId().toString());
@@ -41,25 +43,25 @@ public class PaymentsControllerV1 {
                 .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
     }
     @GetMapping("/transaction/list")
-    public Mono<ResponseEntity<Flux<ResponseTransactionDto>>> getAllTransactionsList(
+    public Mono<ResponseEntity<Flux<ResponseTopupTransactionDto>>> getAllTransactionsList(
             @RequestParam(value = "start_date", required = false) Long startDate,
             @RequestParam(value = "end_date", required = false) Long endDate) {
-        Flux<ResponseTransactionDto> transactionsFlux;
+        Flux<ResponseTopupTransactionDto> transactionsFlux;
         if(startDate != null && endDate != null) {
             LocalDateTime startDateTime = LocalDateTime.ofEpochSecond(startDate, 0, ZoneOffset.UTC);
             LocalDateTime endDateTime = LocalDateTime.ofEpochSecond(endDate, 0, ZoneOffset.UTC);
             transactionsFlux = transactionService.getAllByPeriod(startDateTime, endDateTime)
-                    .map(transactionMapper::mapToResponseDto);
+                    .map(transactionMapper::mapToResponseTopupDto);
         } else {
             transactionsFlux = transactionService.getAll()
-                    .map(transactionMapper::mapToResponseDto);
+                    .map(transactionMapper::mapToResponseTopupDto);
         }
         return Mono.just(ResponseEntity.ok(transactionsFlux));
     }
     @GetMapping("/transaction/{transactionId}/details")
-    public Mono<ResponseEntity<ResponseTransactionDto>> getTransactionDetails(@PathVariable UUID transactionId){
-        return transactionService.getById(transactionId)
-                .map(transactionMapper::mapToResponseDto)
+    public Mono<ResponseEntity<ResponseTopupTransactionDto>> getTransactionDetails(@PathVariable UUID transactionId){
+        return transactionService.getByIdWithDetails(transactionId)
+                .map(transactionMapper::mapToResponseTopupDto)
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build())
                 .doOnError(error -> log.warn("Error retrieving transaction details: {}", error.getMessage()));
@@ -68,18 +70,20 @@ public class PaymentsControllerV1 {
         // return only full card number in cardDto
     }
 
-  //  @PostMapping("/payout/")
-//    public Mono<ResponseEntity<Map<String, String>>> createPayoutTransaction(@RequestBody PayoutDto payoutDto){
-//        return payoutService.processPayout(payoutDto)
-//                .map(savedPayoutTransaction -> {
-//                    Map<String, String> response = new HashMap<>();
-//                    response.put("transaction_id", savedPayoutTransaction.getId().toString());
-//                    response.put("status", savedPayoutTransaction.getStatus().toString());
-//                    response.put("message", "Payout is successfully completed");
-//                    return response;
-//                })
-//                .map(ResponseEntity::ok)
-//                .defaultIfEmpty(ResponseEntity.status(HttpStatus.BAD_REQUEST).build())
-//                .doOnError(error -> log.warn("Error processing payout transaction: {}", error.getMessage()));
-//    }
+
+
+    @PostMapping("/payout/")
+    public Mono<ResponseEntity<Map<String, String>>> createPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto) {
+        return transactionService.processPayout(transactionMapper.mapFromRequestPayoutDto(payoutDto))
+                .map(savedPayoutTransaction -> {
+                    Map<String, String> response = new HashMap<>();
+                    response.put("transaction_id", savedPayoutTransaction.getId().toString());
+                    response.put("status", savedPayoutTransaction.getStatus().toString());
+                    response.put("message", "Payout is successfully completed");
+                    return response;
+                })
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.status(HttpStatus.BAD_REQUEST).build())
+                .doOnError(error -> log.warn("Error processing payout transaction: {}", error.getMessage()));
+    }
 }

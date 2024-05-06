@@ -12,6 +12,36 @@ Junit 5
 Mockito
 Docker
 
+6. И у мерчанта и у кастомера может быть несколько валют. Для каждой валюты - только один акканут для мерчанта и кастомера
+Merchant
+Account - счет мерчанта
+Карта принадлжеит кастомеру
+Не хватает таблицы webhooks, которыеы ты должен хранить
+Нет, не 3 баланса -
+Мерчант 100500
+У него 3 разных акканута
+Под каждую валюту
+
+Для account + card + customer свои сервисы
+!!!
+Транзакция относится ТОЛЬКО к
+card_id
+account_id
+!!!
+У вебхука мы храним
+transaction uid
+номер попытки отправки
+тело запроса
+урл запроса
+тело ответа
+статус ответа
+статус
+
+ACTIVE - по статусу
+CREATED/UPDATE BY - нужен ID того, кто сделал апдейт. Здесь подумай, как это прокидывать.
+
+
+
 Create Transaction (top up)
 POST api/v1/payments/topups/
 Required - Unique parameter, which must be passed to all requests for identification
@@ -48,9 +78,7 @@ Withdrawal (PayOut)
 Transaction method allows to create payout (withdrawal) transaction and send money to customer payment card.
 Create PayOut
 POST api/v1/payments/payout/
-You must include the authorization parameter in your header when posting your request. The authorization header must contain the word "Basic" followed by a space and your credentials encoded in Base64 format. To encode your credentials you must type your merchant ID followed by a colon and your secret key like so: secretKey .
-merchantId :
-merchantId=PROSELYTE secretKey=b2eeea3e27834b7499dd7e01143a23dd
+
 Mock request
 POST api/v1/payments/payout/
 {

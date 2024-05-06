@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -16,10 +17,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("cards")
-public class CardEntity implements Persistable<Long> {
+public class CardEntity implements Persistable<String> {
 
     @Id
-    private Long id;
     private String cardNumber;
     private String expDate;
     private String cvv;
@@ -30,8 +30,16 @@ public class CardEntity implements Persistable<Long> {
     private String updatedBy;
     private Status status;
 
+    @Transient
+    private boolean firstTransaction;
+
+    @Override
+    public String getId() {
+        return cardNumber;
+    }
+
     @Override
     public boolean isNew() {
-        return this.id == null;
+        return firstTransaction;
     }
 }
