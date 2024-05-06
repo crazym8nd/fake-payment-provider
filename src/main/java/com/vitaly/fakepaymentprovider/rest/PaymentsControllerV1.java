@@ -3,6 +3,7 @@ package com.vitaly.fakepaymentprovider.rest;
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestPayoutTransactionDto;
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestTopupTransactionDto;
 import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTopupTransactionDto;
+import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTransactionDetailsDto;
 import com.vitaly.fakepaymentprovider.mapper.TransactionMapper;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,7 @@ public class PaymentsControllerV1 {
                         transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto))
                 .map(savedTransaction -> {
                     Map<String, String> response = new HashMap<>();
-                    response.put("transaction_id", savedTransaction.getId().toString());
+                    response.put("transaction_id", savedTransaction.getTransactionId().toString());
                     response.put("status", savedTransaction.getStatus().toString());
                     response.put("message", "OK");
                     return response;
@@ -59,15 +60,27 @@ public class PaymentsControllerV1 {
         return Mono.just(ResponseEntity.ok(transactionsFlux));
     }
     @GetMapping("/transaction/{transactionId}/details")
-    public Mono<ResponseEntity<ResponseTopupTransactionDto>> getTransactionDetails(@PathVariable UUID transactionId){
+    public Mono<ResponseEntity<ResponseTransactionDetailsDto>> getTransactionDetails(@PathVariable UUID transactionId){
         return transactionService.getByIdWithDetails(transactionId)
-                .map(transactionMapper::mapToResponseTopupDto)
+                .map(transactionEntity -> {
+                    ResponseTransactionDetailsDto dto = transactionMapper.mapToResponseWithDetailsDto(transactionEntity);
+                    dto.setStatus("APPROVED");
+                    dto.setMessage("OK");
+                return dto;})
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build())
                 .doOnError(error -> log.warn("Error retrieving transaction details: {}", error.getMessage()));
-        // should return also "status":"APPROVED",
-        //         "message":"OK"
-        // return only full card number in cardDto
+
+//        return transactionService.getByIdWithDetails(transactionId)
+//                .map(transactionMapper::mapToResponseWithDetailsDto)
+//                .map(responseTransactionDetailsDto -> {
+//                    responseTransactionDetailsDto.setDetailedStatus("APPROVED");
+//                    responseTransactionDetailsDto.setMessage("OK");
+//                    return responseTransactionDetailsDto;
+//                })
+//                .map(ResponseEntity::ok)
+//                .defaultIfEmpty(ResponseEntity.notFound().build())
+//                .doOnError(error -> log.warn("Error retrieving transaction details: {}", error.getMessage()));
     }
 
 
