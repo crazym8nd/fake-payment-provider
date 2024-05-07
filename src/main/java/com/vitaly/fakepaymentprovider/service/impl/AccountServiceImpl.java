@@ -1,6 +1,7 @@
 package com.vitaly.fakepaymentprovider.service.impl;
 
 import com.vitaly.fakepaymentprovider.entity.AccountEntity;
+import com.vitaly.fakepaymentprovider.entity.util.Currency;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.repository.AccountRepository;
 import com.vitaly.fakepaymentprovider.service.AccountService;
@@ -64,4 +65,8 @@ public class AccountServiceImpl implements AccountService {
     }
 
 
+    @Override
+    public Mono<AccountEntity> getByMerchantIdAndCurrency(String merchantId, Currency currency) {
+        return accountRepository.findByMerchantIdAndCurrency(merchantId, currency);
+    }
 }

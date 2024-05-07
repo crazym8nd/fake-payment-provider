@@ -27,12 +27,9 @@ import java.util.UUID;
 public class PaymentsControllerV1 {
 
     /*
-    first i need to finish my transaction top up logic for service
-    currently it saves transaction and card data
-    it also needs to create account with currency from transaction and saving customer data
+    it also needs saving customer data
     transaction working only with card id and account id
     need to add endpoints
-POST api/v1/payments/payout/
 GET api/v1/payments/payout/{PayoutId}/details
 GET api/v1/payments/payout/list
      */
@@ -88,7 +85,8 @@ GET api/v1/payments/payout/list
 
     @PostMapping("/payout/")
     public Mono<ResponseEntity<Map<String, String>>> createPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto) {
-        return transactionService.processPayout(transactionMapper.mapFromRequestPayoutDto(payoutDto))
+        String merchantId = "PROSELYTE";
+        return transactionService.processPayout(transactionMapper.mapFromRequestPayoutDto(payoutDto), merchantId)
                 .map(savedPayoutTransaction -> {
                     Map<String, String> response = new HashMap<>();
                     response.put("transaction_id", savedPayoutTransaction.getId().toString());

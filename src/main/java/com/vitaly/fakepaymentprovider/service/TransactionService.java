@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface TransactionService extends GenericService<TransactionEntity, UUID>{
     Flux<TransactionEntity> getAllByPeriod(LocalDateTime startDateTime, LocalDateTime endDateTime);
-    Mono<TransactionEntity> processPayout(TransactionEntity transactionEntity);
     Mono<TransactionEntity> getByIdWithDetails(UUID transactionId);
     Mono<TransactionEntity> save(TransactionEntity transactionEntity);
+    Mono<TransactionEntity> processPayout(TransactionEntity transactionEntity, String merchantId);
 }

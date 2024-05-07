@@ -12,13 +12,22 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    private final String msgPaymentMethodNotAllowed = "PAYMENT_METHOD_NOT_ALLOWED";
-
-    @ExceptionHandler(TransactionRequestInvalidPaymentMethodException.class)
-    public ResponseEntity<Map<String, String>> handleException(Exception e) {
+    @ExceptionHandler(RequestTopUpTransactionInvalidPaymentMethodException.class)
+    public ResponseEntity<Map<String, String>> handleTopUpException() {
+        String msgPaymentMethodNotAllowed = "PAYMENT_METHOD_NOT_ALLOWED";
         Map<String, String> response = new HashMap<>();
         response.put("status", Status.FAILED.toString());
         response.put("message", msgPaymentMethodNotAllowed);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
+    @ExceptionHandler(RequestPayoutTransactionInvalidAmountException.class)
+    public ResponseEntity<Map<String, String>> handlePayoutException() {
+        String msgPayoutNoMinAmount = "PAYOUT_MIN_AMOUNT";
+
+        Map<String, String> response = new HashMap<>();
+        response.put("error_code", Status.FAILED.toString());
+        response.put("message", msgPayoutNoMinAmount);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
 }

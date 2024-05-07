@@ -4,7 +4,8 @@ import com.vitaly.fakepaymentprovider.entity.AccountEntity;
 import com.vitaly.fakepaymentprovider.entity.CardEntity;
 import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
-import com.vitaly.fakepaymentprovider.exceptionhandling.TransactionRequestInvalidPaymentMethodException;
+import com.vitaly.fakepaymentprovider.exceptionhandling.RequestPayoutTransactionInvalidAmountException;
+import com.vitaly.fakepaymentprovider.exceptionhandling.RequestTopUpTransactionInvalidPaymentMethodException;
 import com.vitaly.fakepaymentprovider.repository.TransactionRepository;
 import com.vitaly.fakepaymentprovider.service.AccountService;
 import com.vitaly.fakepaymentprovider.service.CardService;
@@ -17,6 +18,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -48,12 +50,12 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Mono<TransactionEntity> getByIdWithDetails(UUID transactionId) {
-       return transactionRepository.findById(transactionId)
-               .map(transactionEntity -> {
-                   transactionEntity.setCardData(CardEntity.builder()
-                           .cardNumber(transactionEntity.getCardNumber()).build());
-                   return transactionEntity;
-               });
+        return transactionRepository.findById(transactionId)
+                .map(transactionEntity -> {
+                    transactionEntity.setCardData(CardEntity.builder()
+                            .cardNumber(transactionEntity.getCardNumber()).build());
+                    return transactionEntity;
+                });
     }
 
     @Override
@@ -64,14 +66,13 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
 
-
     @Override
     @Transactional
     public Mono<TransactionEntity> save(TransactionEntity transactionEntity) {
         log.warn("Saving transaction{}", transactionEntity);
 
         if (!transactionEntity.getPaymentMethod().equals("CARD")) {
-            return Mono.error(new TransactionRequestInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
+            return Mono.error(new RequestTopUpTransactionInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
         } else {
             Mono<CardEntity> saveCardData = cardService.save(transactionEntity.getCardData());
 
@@ -105,6 +106,7 @@ public class TransactionServiceImpl implements TransactionService {
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
         }
     }
+
     @Override
     public Mono<TransactionEntity> deleteById(UUID transactionId) {
         return transactionRepository.findById(transactionId)
@@ -112,7 +114,7 @@ public class TransactionServiceImpl implements TransactionService {
                         .thenReturn(transaction));
     }
 
-    private Mono<AccountEntity> saveAccountData(TransactionEntity transactionEntity){
+    private Mono<AccountEntity> saveAccountData(TransactionEntity transactionEntity) {
         return accountService.save(
                 AccountEntity.builder()
                         .merchantId("PROSELYTE")
@@ -125,10 +127,36 @@ public class TransactionServiceImpl implements TransactionService {
     //transactions payout
     @Override
     @Transactional
-    public Mono<TransactionEntity> processPayout(TransactionEntity transactionEntity) {
+    public Mono<TransactionEntity> processPayout(TransactionEntity transactionEntity, String merchantId) {
         log.warn("Payout transaction: {}", transactionEntity);
+        Mono<AccountEntity> accountMono = accountService.getByMerchantIdAndCurrency(merchantId, transactionEntity.getCurrency());
 
-
-      return null;
+        return accountMono.flatMap(accountEntity -> {
+            BigDecimal accountAmount = accountEntity.getAmount();
+            if (accountAmount != null && accountAmount.compareTo(transactionEntity.getAmount()) >= 0) {
+                BigDecimal newAccountAmount = accountAmount.subtract(transactionEntity.getAmount());
+                return accountService.update(
+                                accountEntity.toBuilder()
+                                        .amount(newAccountAmount)
+                                        .updatedAt(LocalDateTime.now())
+                                        .build())
+                        .flatMap(updatedAccount -> transactionRepository.save(transactionEntity.toBuilder()
+                                .paymentMethod(transactionEntity.getPaymentMethod())
+                                .amount(transactionEntity.getAmount())
+                                .currency(transactionEntity.getCurrency())
+                                .language(transactionEntity.getLanguage())
+                                .notificationUrl(transactionEntity.getNotificationUrl())
+                                .cardNumber(transactionEntity.getCardData().getCardNumber())
+                                .customer(transactionEntity.getCustomer())
+                                .createdAt(LocalDateTime.now())
+                                .updatedAt(LocalDateTime.now())
+                                .createdBy("SYSTEM")
+                                .updatedBy("SYSTEM")
+                                .status(Status.SUCCESS)
+                                .build()));
+            } else {
+                return Mono.error(new RequestPayoutTransactionInvalidAmountException("PAYOUT_MIN_AMOUNT"));
+            }
+        });
     }
 }
