@@ -8,6 +8,6 @@ import reactor.core.publisher.Mono;
 
 public interface CardRepository extends R2dbcRepository<CardEntity, String> {
     @Modifying
-    @Query("UPDATE cards SET status = 'DELETED' WHERE id = :id")
+    @Query("UPDATE cards SET status = 'DELETED' WHERE card_number = :cardNumber")
     Mono<Void> deleteById(String cardNumber);
 }

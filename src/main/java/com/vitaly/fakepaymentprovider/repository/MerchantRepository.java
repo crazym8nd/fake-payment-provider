@@ -8,6 +8,6 @@ import reactor.core.publisher.Mono;
 
 public interface MerchantRepository extends R2dbcRepository<MerchantEntity, String> {
     @Modifying
-    @Query("UPDATE merchants SET status = 'DELETED' WHERE id = :id")
+    @Query("UPDATE merchants SET status = 'DELETED' WHERE merchant_id = :id")
     Mono<Void> deleteById(String id);
 }

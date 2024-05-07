@@ -9,9 +9,9 @@ public class FakePaymentProviderApplication {
     public static void main(String[] args) {
         SpringApplication.run(FakePaymentProviderApplication.class, args);
     }
-    // add endpoints
-    // impl services
+
+    // In transaction i  need to make bond of customer to card so when im receving card i should return customer that attached to that card
+    //then i need to add logic of retrieveing custmer to transactions and payouts
     // add security headers validation
-    // add logging
-    // make tests
+    // make tests to add validation where its needed
 }

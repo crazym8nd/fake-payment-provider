@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.vitaly.fakepaymentprovider.entity.util.Currency;
 import com.vitaly.fakepaymentprovider.entity.util.Language;
+import com.vitaly.fakepaymentprovider.entity.util.Status;
 import lombok.Builder;
 import lombok.Data;
 
@@ -26,6 +27,6 @@ public class ResponseTransactionDetailsDto {
     private Language language;
     private String notificationUrl;
     private ResponseCustomerDto customer;
-    private String status;
+    private Status status;
     private String message;
 }

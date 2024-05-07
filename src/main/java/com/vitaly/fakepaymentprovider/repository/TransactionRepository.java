@@ -7,13 +7,13 @@ import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public interface TransactionRepository extends R2dbcRepository<TransactionEntity, UUID> {
     @Modifying
-    @Query("UPDATE transactions SET status = 'DELETED' WHERE id = :id")
+    @Query("UPDATE transactions SET status = 'DELETED' WHERE transaction_id = :id")
     Mono<Void> deleteById(UUID id);
 
-    Flux<TransactionEntity> findAllByCreatedAtBetween(LocalDateTime startDateTime, LocalDateTime endDateTime);
+    Flux<TransactionEntity> findAllByCreatedAtBetween(LocalDate startDate, LocalDate endDate);
 }
