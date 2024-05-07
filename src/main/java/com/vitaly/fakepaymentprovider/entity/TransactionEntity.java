@@ -29,8 +29,8 @@ public class TransactionEntity implements Persistable<UUID> {
     private Currency currency;
     private Language language;
     private String notificationUrl;
-
     private String cardNumber;
+
     @Transient
     private CardEntity cardData;
 

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
@@ -35,20 +36,25 @@ public class AccountServiceImpl implements AccountService {
                 .build());
     }
 
-    @Override
     public Mono<AccountEntity> save(AccountEntity accountEntity) {
-        return accountRepository.save(
-                accountEntity.toBuilder()
-                        .merchantId(accountEntity.getMerchantId())
-                        .currency(accountEntity.getCurrency())
-                        .amount(accountEntity.getAmount())
-                        .createdAt(accountEntity.getCreatedAt())
-                        .updatedAt(accountEntity.getCreatedAt())
-                        .createdBy("SYSTEM")
-                        .updatedBy("SYSTEM")
-                        .status(Status.ACTIVE)
-                        .build()
-        );
+        return accountRepository.findByMerchantIdAndCurrency(accountEntity.getMerchantId(), accountEntity.getCurrency())
+                .flatMap(existingAccount -> {
+                    BigDecimal newAmount = existingAccount.getAmount().add(accountEntity.getAmount());
+                    existingAccount.setAmount(newAmount);
+                    existingAccount.setUpdatedAt(LocalDateTime.now());
+                    return accountRepository.save(existingAccount);
+                })
+                .switchIfEmpty(Mono.defer(() -> accountRepository.save(
+                        accountEntity.toBuilder()
+                                .merchantId(accountEntity.getMerchantId())
+                                .currency(accountEntity.getCurrency())
+                                .amount(accountEntity.getAmount())
+                                .createdAt(LocalDateTime.now())
+                                .updatedAt(LocalDateTime.now())
+                                .createdBy("SYSTEM")
+                                .updatedBy("SYSTEM")
+                                .status(Status.ACTIVE)
+                                .build())));
     }
 
     @Override
@@ -56,4 +62,6 @@ public class AccountServiceImpl implements AccountService {
         return accountRepository.findById(accountId)
                 .flatMap(acc ->accountRepository.deleteById(acc.getId()).thenReturn(acc));
     }
+
+
 }

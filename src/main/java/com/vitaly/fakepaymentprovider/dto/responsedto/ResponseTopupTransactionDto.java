@@ -2,7 +2,6 @@ package com.vitaly.fakepaymentprovider.dto.responsedto;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import com.vitaly.fakepaymentprovider.dto.CustomerDto;
 import com.vitaly.fakepaymentprovider.entity.util.Currency;
 import com.vitaly.fakepaymentprovider.entity.util.Language;
 import lombok.Builder;
@@ -25,6 +24,5 @@ public class ResponseTopupTransactionDto {
     private ResponseCardDataDto cardData;
     private Language language;
     private String notificationUrl;
-    private CustomerDto customer;
-
+    private ResponseCustomerDto customer;
 }

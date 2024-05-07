@@ -73,5 +73,9 @@ ALTER TABLE accounts ADD CONSTRAINT accounts_merchant_id_fk
                                     REFERENCES merchants(merchant_id)
 ;
 
-ALTER TABLE transactions ALTER COLUMN transaction_id SET DEFAULT uuid_generate_v4();
+ALTER TABLE transactions ALTER COLUMN transaction_id SET DEFAULT uuid_generate_v4()
 ;
+ALTER TABLE accounts ADD CONSTRAINT accounts_unique_pair
+                                    UNIQUE (merchant_id, currency)
+;
+

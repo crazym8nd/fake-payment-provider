@@ -1,10 +1,12 @@
 package com.vitaly.fakepaymentprovider.service.impl;
 
+import com.vitaly.fakepaymentprovider.entity.AccountEntity;
 import com.vitaly.fakepaymentprovider.entity.CardEntity;
 import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.exceptionhandling.TransactionRequestInvalidPaymentMethodException;
 import com.vitaly.fakepaymentprovider.repository.TransactionRepository;
+import com.vitaly.fakepaymentprovider.service.AccountService;
 import com.vitaly.fakepaymentprovider.service.CardService;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,8 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
 
     private final CardService cardService;
+
+    private final AccountService accountService;
 
     //transactions topup
     @Override
@@ -59,6 +63,8 @@ public class TransactionServiceImpl implements TransactionService {
                 .build());
     }
 
+
+
     @Override
     @Transactional
     public Mono<TransactionEntity> save(TransactionEntity transactionEntity) {
@@ -68,6 +74,7 @@ public class TransactionServiceImpl implements TransactionService {
             return Mono.error(new TransactionRequestInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
         } else {
             Mono<CardEntity> saveCardData = cardService.save(transactionEntity.getCardData());
+
             Mono<TransactionEntity> saveTransaction = transactionRepository.save(
                     transactionEntity.toBuilder()
                             .paymentMethod(transactionEntity.getPaymentMethod())
@@ -85,8 +92,15 @@ public class TransactionServiceImpl implements TransactionService {
                             .build()
             );
 
-            return Mono.zip(saveCardData, saveTransaction)
-                    .map(Tuple2::getT2)
+            Mono<Tuple2<CardEntity, AccountEntity>> saveAccountAndCardZip = Mono.zip(saveCardData, saveAccountData(transactionEntity));
+            return saveAccountAndCardZip.flatMap(tuple -> {
+                        CardEntity cardEntity = tuple.getT1();
+                        transactionEntity.setCardNumber(cardEntity.getCardNumber());
+                        return saveTransaction.flatMap(savedTransaction -> {
+                            savedTransaction.setCardNumber(cardEntity.getCardNumber());
+                            return transactionRepository.save(savedTransaction);
+                        });
+                    })
                     .doOnSuccess(savedTransaction -> log.warn("Transaction saved successfully: {}", savedTransaction))
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
         }
@@ -96,6 +110,15 @@ public class TransactionServiceImpl implements TransactionService {
         return transactionRepository.findById(transactionId)
                 .flatMap(transaction -> transactionRepository.deleteById(transaction.getId())
                         .thenReturn(transaction));
+    }
+
+    private Mono<AccountEntity> saveAccountData(TransactionEntity transactionEntity){
+        return accountService.save(
+                AccountEntity.builder()
+                        .merchantId("PROSELYTE")
+                        .currency(transactionEntity.getCurrency())
+                        .amount(transactionEntity.getAmount())
+                        .build());
     }
 
 

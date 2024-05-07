@@ -26,11 +26,23 @@ import java.util.UUID;
 @Slf4j
 public class PaymentsControllerV1 {
 
+    /*
+    first i need to finish my transaction top up logic for service
+    currently it saves transaction and card data
+    it also needs to create account with currency from transaction and saving customer data
+    transaction working only with card id and account id
+    need to add endpoints
+POST api/v1/payments/payout/
+GET api/v1/payments/payout/{PayoutId}/details
+GET api/v1/payments/payout/list
+     */
+
     private final TransactionService transactionService;
     private final TransactionMapper transactionMapper;
 
     @PostMapping("/topups/")
     public Mono<ResponseEntity<Map<String, String>>> topUpTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto){
+
         return transactionService.save(
                         transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto))
                 .map(savedTransaction -> {
@@ -70,17 +82,6 @@ public class PaymentsControllerV1 {
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build())
                 .doOnError(error -> log.warn("Error retrieving transaction details: {}", error.getMessage()));
-
-//        return transactionService.getByIdWithDetails(transactionId)
-//                .map(transactionMapper::mapToResponseWithDetailsDto)
-//                .map(responseTransactionDetailsDto -> {
-//                    responseTransactionDetailsDto.setDetailedStatus("APPROVED");
-//                    responseTransactionDetailsDto.setMessage("OK");
-//                    return responseTransactionDetailsDto;
-//                })
-//                .map(ResponseEntity::ok)
-//                .defaultIfEmpty(ResponseEntity.notFound().build())
-//                .doOnError(error -> log.warn("Error retrieving transaction details: {}", error.getMessage()));
     }
 
 

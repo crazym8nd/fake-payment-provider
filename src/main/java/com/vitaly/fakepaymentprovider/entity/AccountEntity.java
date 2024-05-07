@@ -12,7 +12,6 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 @Data
 @Builder(toBuilder = true)
@@ -25,6 +24,7 @@ public class AccountEntity implements Persistable<Long> {
     private String merchantId;
     private Currency currency;
     private BigDecimal amount;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
@@ -33,6 +33,6 @@ public class AccountEntity implements Persistable<Long> {
 
     @Override
     public boolean isNew() {
-        return Objects.isNull(id);
+        return this.id== null;
     }
 }
