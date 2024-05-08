@@ -37,7 +37,12 @@ public class AccountServiceImpl implements AccountService {
                 .build());
     }
 
+    @Override
     public Mono<AccountEntity> save(AccountEntity accountEntity) {
+        return accountRepository.save(accountEntity);
+    }
+
+    public Mono<AccountEntity> saveAccountInTransaction(AccountEntity accountEntity) {
         return accountRepository.findByMerchantIdAndCurrency(accountEntity.getMerchantId(), accountEntity.getCurrency())
                 .flatMap(existingAccount -> {
                     BigDecimal newAmount = existingAccount.getAmount().add(accountEntity.getAmount());
@@ -50,8 +55,6 @@ public class AccountServiceImpl implements AccountService {
                                 .merchantId(accountEntity.getMerchantId())
                                 .currency(accountEntity.getCurrency())
                                 .amount(accountEntity.getAmount())
-                                .createdAt(LocalDateTime.now())
-                                .updatedAt(LocalDateTime.now())
                                 .createdBy("SYSTEM")
                                 .updatedBy("SYSTEM")
                                 .status(Status.ACTIVE)

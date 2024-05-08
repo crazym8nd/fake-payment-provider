@@ -3,10 +3,8 @@ package com.vitaly.fakepaymentprovider.entity;
 import com.vitaly.fakepaymentprovider.entity.util.Currency;
 import com.vitaly.fakepaymentprovider.entity.util.Language;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
@@ -30,6 +28,7 @@ public class TransactionEntity implements Persistable<UUID> {
     private Language language;
     private String notificationUrl;
     private String cardNumber;
+    private TransactionType transactionType;
 
     @Transient
     private CardEntity cardData;
@@ -49,7 +48,7 @@ public class TransactionEntity implements Persistable<UUID> {
     }
     @Override
     public boolean isNew() {
-        return this.transactionId == null;
+        return this.createdAt == null;
     }
 
 

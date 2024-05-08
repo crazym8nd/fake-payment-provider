@@ -16,9 +16,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("customers")
-public class CustomerEntity implements Persistable<Long> {
+public class CustomerEntity implements Persistable<String> {
     @Id
-    private Long id;
+    private String cardNumber;
     private String firstName;
     private String lastName;
     private String country;
@@ -31,7 +31,14 @@ public class CustomerEntity implements Persistable<Long> {
 
 
     @Override
-    public boolean isNew() {
-        return this.id == null;
+    public String getId() {
+        return cardNumber;
     }
+
+    @Override
+    public boolean isNew() {
+        return this.createdAt == null;
+    }
+
+
 }

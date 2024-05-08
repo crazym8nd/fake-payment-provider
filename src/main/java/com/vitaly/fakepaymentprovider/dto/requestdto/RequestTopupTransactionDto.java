@@ -8,7 +8,6 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Data
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
@@ -17,8 +16,6 @@ public class RequestTopupTransactionDto {
     private String paymentMethod;
     private BigDecimal amount;
     private Currency currency;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
     private RequestCardDataDto cardData;
     private Language language;
     private String notificationUrl;

@@ -6,4 +6,5 @@ import reactor.core.publisher.Mono;
 
 public interface AccountService extends GenericService<AccountEntity,Long>{
     Mono<AccountEntity> getByMerchantIdAndCurrency(String merchantId, Currency currency);
+    Mono<AccountEntity> saveAccountInTransaction(AccountEntity accountEntity);
 }

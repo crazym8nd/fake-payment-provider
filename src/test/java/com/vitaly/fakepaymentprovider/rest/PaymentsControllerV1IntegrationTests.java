@@ -41,7 +41,7 @@ class PaymentsControllerV1IntegrationTests {
     public void givenTransactionId_whenGetTransactionDetails_thenSuccessResponse() throws InterruptedException {
         //given
 
-        UUID transactionId = transactionService.save(TransactionDataUtils.transactionForDetailsTest())
+        UUID transactionId = transactionService.processTopupTransaction(TransactionDataUtils.transactionForDetailsTest())
                 .map(TransactionEntity::getTransactionId)
                 .block();
         //when

@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -30,9 +29,6 @@ public class CardEntity implements Persistable<String> {
     private String updatedBy;
     private Status status;
 
-    @Transient
-    private boolean firstTransaction;
-
     @Override
     public String getId() {
         return cardNumber;
@@ -40,6 +36,6 @@ public class CardEntity implements Persistable<String> {
 
     @Override
     public boolean isNew() {
-        return firstTransaction;
+        return createdAt == null;
     }
 }

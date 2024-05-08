@@ -2,6 +2,7 @@ package com.vitaly.fakepaymentprovider.service.impl;
 
 import com.vitaly.fakepaymentprovider.entity.CustomerEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
+import com.vitaly.fakepaymentprovider.repository.CardRepository;
 import com.vitaly.fakepaymentprovider.repository.CustomerRepository;
 import com.vitaly.fakepaymentprovider.service.CustomerService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final CardRepository cardRepository;
 
     @Override
     public Flux<CustomerEntity> getAll() {
@@ -25,7 +27,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public Mono<CustomerEntity> getById(Long customerId) {
+    public Mono<CustomerEntity> getById(String customerId) {
         return customerRepository.findById(customerId);
     }
 
@@ -38,28 +40,30 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public Mono<CustomerEntity> save(CustomerEntity customerEntity) {
-        return customerRepository.save(customerEntity.toBuilder()
-                        .firstName(customerEntity.getFirstName())
-                        .lastName(customerEntity.getLastName())
-                        .country(customerEntity.getCountry())
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
-                        .createdBy("SYSTEM")
-                        .updatedBy("SYSTEM")
-                        .status(Status.ACTIVE)
-                .build());
+        return customerRepository.save(customerEntity);
     }
 
     @Override
-    public Mono<CustomerEntity> deleteById(Long customerId) {
+    public Mono<CustomerEntity> saveCustomerInTransaction(CustomerEntity customerEntity) {
+        return customerRepository.findById(customerEntity.getCardNumber())
+                .switchIfEmpty(saveNewCustomer(customerEntity));
+    }
+
+    @Override
+    public Mono<CustomerEntity> deleteById(String customerId) {
         return customerRepository.findById(customerId)
                 .flatMap(customer -> customerRepository.deleteById(customerId)
                         .thenReturn(customer));
     }
 
-    @Override
-    public Mono<CustomerEntity> getCustomerByCredentials(CustomerEntity customer) {
-        return customerRepository.findByFirstNameAndAndLastNameAndCountry(customer.getFirstName(),
-                customer.getLastName(), customer.getCountry());
+    private Mono<CustomerEntity> saveNewCustomer(CustomerEntity customerEntity) {
+        return Mono.defer(() -> {
+            CustomerEntity newCustomer = customerEntity.toBuilder()
+                    .createdBy("SYSTEM")
+                    .updatedBy("SYSTEM")
+                    .status(Status.ACTIVE)
+                    .build();
+            return customerRepository.save(newCustomer);
+        });
     }
 }

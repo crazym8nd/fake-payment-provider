@@ -26,13 +26,13 @@ CREATE TABLE IF NOT EXISTS cards (
                                      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                      created_by VARCHAR(256) NOT NULL,
                                      updated_by VARCHAR(256) NOT NULL,
-                                     status VARCHAR(256) DEFAULT 'IN_PROGRESS' NOT NULL
+                                     status VARCHAR(256) DEFAULT 'ACTIVE' NOT NULL
 );
 CREATE TABLE IF NOT EXISTS customers (
-                                         id SERIAL PRIMARY KEY,
+                                         card_number VARCHAR(16) NOT NULL PRIMARY KEY UNIQUE,
                                          first_name VARCHAR(256) NOT NULL,
                                          last_name VARCHAR(256) NOT NULL,
-                                         country VARCHAR(256) UNIQUE NOT NULL,
+                                         country VARCHAR(256) NOT NULL,
                                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                          created_by VARCHAR(256) NOT NULL,
@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS transactions (
                                             language VARCHAR(25) NOT NULL,
                                             notification_url VARCHAR(256) NOT NULL,
                                             card_number VARCHAR(16) NOT NULL,
+                                            transaction_type VARCHAR(25) NOT NULL,
                                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                             created_by VARCHAR(256) NOT NULL,
@@ -67,13 +68,9 @@ CREATE TABLE IF NOT EXISTS webhooks (
                                         updated_by VARCHAR(256) NOT NULL,
                                         status VARCHAR(256) DEFAULT 'IN_PROGRESS' NOT NULL
 );
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 ALTER TABLE accounts ADD CONSTRAINT accounts_merchant_id_fk
                                     FOREIGN KEY (merchant_id)
                                     REFERENCES merchants(merchant_id)
-;
-
-ALTER TABLE transactions ALTER COLUMN transaction_id SET DEFAULT uuid_generate_v4()
 ;
 ALTER TABLE accounts ADD CONSTRAINT accounts_unique_pair
                                     UNIQUE (merchant_id, currency)
