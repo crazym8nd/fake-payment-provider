@@ -16,13 +16,12 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @RestController
@@ -49,41 +48,35 @@ public class PaymentsControllerV1 {
     }
     @GetMapping("/transaction/list")
     public Mono<ResponseEntity<ResponseTransactionsListDto>> getAllTransactionsList(
-            @RequestParam(value = "start_date", required = false) Long startDate,
-            @RequestParam(value = "end_date", required = false) Long endDate) {
-        LocalDateTime startDateTime;
-        LocalDateTime endDateTime;
-        Flux<ResponseTransactionDetailsDto> transactionsFlux;
-
-        if(startDate != null && endDate != null) {
-            startDateTime = LocalDateTime.from(LocalDate.from(LocalDateTime.ofEpochSecond(startDate, 0, ZoneOffset.UTC)));
-            endDateTime = LocalDateTime.from(LocalDate.from(LocalDateTime.ofEpochSecond(endDate, 0, ZoneOffset.UTC)));
-
-            transactionsFlux = transactionService
-                    .getAllTransactionsByTypeAndPeriod(TransactionType.TOPUP, startDateTime, endDateTime)
-                    .map(transactionMapper::mapToResponseWithDetailsDto)
-                    .map(dto -> {
-                        dto.setMessage("OK");
-                        return dto;
-                    });
+            @RequestParam(value = "start_date", required = false) Long startDateUnix,
+            @RequestParam(value = "end_date", required = false) Long endDateUnix) {
+        LocalDateTime startDate;
+        LocalDateTime endDate;
+        if(startDateUnix!=null & startDateUnix!=null){
+            startDate = Instant.ofEpochSecond(startDateUnix).atZone(ZoneOffset.UTC).toLocalDateTime();
+            endDate = Instant.ofEpochSecond(endDateUnix).atZone(ZoneOffset.UTC).toLocalDateTime();
+            return transactionService.getAllTransactionsByTypeAndPeriod(TransactionType.TOPUP, startDate, endDate)
+                    .collectList()
+                    .flatMap(list -> Mono.just(ResponseTransactionsListDto.builder()
+                            .transactionList(list.stream()
+                                    .map(transactionMapper::mapToResponseWithDetailsDto)
+                                    .peek(dto -> dto.setMessage("OK"))
+                                    .collect(Collectors.toList()))
+                            .build()))
+                    .map(ResponseEntity::ok);
         } else {
-            LocalDateTime today = LocalDateTime.now(ZoneOffset.UTC);
-            startDateTime = today;
-            endDateTime = today;
-            transactionsFlux = transactionService
-                    .getAllTransactionsByTypeAndPeriod(TransactionType.TOPUP, startDateTime, endDateTime)
-                    .map(transactionMapper::mapToResponseWithDetailsDto)
-                    .map(dto -> {
-                        dto.setMessage("OK");
-                        return dto;
-                    });
+            LocalDate today = LocalDate.now(ZoneOffset.UTC);
+            return transactionService.getAllTransactionsByTypeAndDay(TransactionType.TOPUP, today)
+                    .collectList()
+                    .flatMap(list -> Mono.just(ResponseTransactionsListDto.builder()
+                            .transactionList(list.stream()
+                                    .map(transactionMapper::mapToResponseWithDetailsDto)
+                                    .peek(dto -> dto.setMessage("OK"))
+                                    .collect(Collectors.toList()))
+                            .build()))
+                    .map(ResponseEntity::ok);
         }
 
-        return transactionsFlux.collectList()
-                .map(list -> ResponseTransactionsListDto.builder()
-                        .transactionList(list)
-                        .build())
-                .map(responseTransactionsListDto -> ResponseEntity.ok().body(responseTransactionsListDto));
     }
 
     @GetMapping("/transaction/{transactionId}/details")
@@ -118,12 +111,14 @@ public class PaymentsControllerV1 {
 
    @GetMapping("/payout/list")
    public Mono<ResponseEntity<ResponsePayoutsListDto>> getAllPayoutsList(
-           @RequestParam(value = "start_date", required = false) String startDateStr,
-           @RequestParam(value = "end_date", required = false) String endDateStr) {
+           @RequestParam(value = "start_date", required = false)  String startDateStr,
+           @RequestParam(value = "end_date", required = false)  String endDateStr) {
        Flux<ResponseTransactionDetailsDto> transactionsFlux;
+       DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
        if(startDateStr!= null && endDateStr!= null) {
-           LocalDateTime startDateTime = LocalDateTime.from(LocalDate.parse(startDateStr, DateTimeFormatter.ofPattern("dd-MM-yyyy")));
-           LocalDateTime endDateTime = LocalDateTime.from(LocalDate.parse(endDateStr, DateTimeFormatter.ofPattern("dd-MM-yyyy")));
+           LocalDateTime startDateTime = LocalDate.parse(startDateStr, formatter).atStartOfDay(ZoneOffset.UTC).toLocalDateTime();
+           LocalDateTime endDateTime = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59).atZone(ZoneOffset.UTC).toLocalDateTime();
            transactionsFlux = transactionService.getAllTransactionsByTypeAndPeriod(TransactionType.PAYOUT, startDateTime, endDateTime)
                    .map(transactionMapper::mapToResponseWithDetailsDto)
                    .map(dto -> {
@@ -132,7 +127,8 @@ public class PaymentsControllerV1 {
                    });
 
        } else {
-           transactionsFlux = transactionService.getAll()
+           LocalDate today = LocalDate.now(ZoneOffset.UTC);
+           transactionsFlux = transactionService.getAllTransactionsByTypeAndDay(TransactionType.PAYOUT, today)
                    .map(transactionMapper::mapToResponseWithDetailsDto)
                    .map(dto -> {
                        dto.setMessage("OK");

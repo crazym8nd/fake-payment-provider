@@ -21,6 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -46,7 +47,27 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Flux<TransactionEntity> getAllTransactionsByTypeAndPeriod(TransactionType type, LocalDateTime startDate, LocalDateTime endDate) {
-        return transactionRepository.findAllByTransactionTypeAndCreatedAtBetween( type, startDate, endDate)
+        return transactionRepository.findTopUpTransactions( type, startDate, endDate)
+                .flatMap(transactionEntity ->
+                        Mono.zip(
+                                cardService.getById(transactionEntity.getCardNumber()),
+                                customerService.getById(transactionEntity.getCardNumber()),
+                                Mono.just(transactionEntity)
+                        ).map(tuple -> {
+                            CardEntity cardEntity = tuple.getT1();
+                            CustomerEntity customerEntity = tuple.getT2();
+                            TransactionEntity transaction = tuple.getT3();
+
+                            transaction.setCardData(cardEntity);
+                            transaction.setCustomer(customerEntity);
+                            return transaction;
+                        })
+                );
+    }
+
+    @Override
+    public Flux<TransactionEntity> getAllTransactionsByTypeAndDay(TransactionType type, LocalDate date) {
+        return transactionRepository.findTransactionsByTypeAndDay( type, date)
                 .flatMap(transactionEntity ->
                         Mono.zip(
                                 cardService.getById(transactionEntity.getCardNumber()),
@@ -102,6 +123,7 @@ public class TransactionServiceImpl implements TransactionService {
 
 
     @Transactional
+    @Override
     public Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity) {
         transactionEntity.setTransactionId(UUID.randomUUID());
         transactionEntity.setCardNumber(transactionEntity.getCardData().getCardNumber());
@@ -166,40 +188,52 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public Mono<TransactionEntity> processPayoutTransaction(TransactionEntity transactionEntity, String merchantId) {
+        transactionEntity.setTransactionId(UUID.randomUUID());
+        transactionEntity.setCardNumber(transactionEntity.getCardData().getCardNumber());
+        CustomerEntity customerEntity = CustomerEntity.builder()
+                .firstName(transactionEntity.getCustomer().getFirstName())
+                .lastName(transactionEntity.getCustomer().getLastName())
+                .country(transactionEntity.getCustomer().getCountry())
+                .cardNumber(transactionEntity.getCardNumber())
+                .build();
+
         log.warn("Payout transaction: {}", transactionEntity);
-        Mono<AccountEntity> accountMono = accountService.getByMerchantIdAndCurrency(merchantId, transactionEntity.getCurrency());
-        Mono<CustomerEntity> customerMono = customerService.getById(transactionEntity.getCardNumber());
+        if (!transactionEntity.getPaymentMethod().equals("CARD")) {
+            return Mono.error(new RequestTopUpTransactionInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
+        } else {
+            Mono<CardEntity> saveCardData = cardService.saveCardInTransaction(transactionEntity.getCardData());
+            Mono<AccountEntity> accountMono = accountService.getByMerchantIdAndCurrency(merchantId, transactionEntity.getCurrency());
+            Mono<CustomerEntity> saveCustomerData = customerService.saveCustomerInTransaction(customerEntity);
 
-        return Mono.zip(accountMono, customerMono)
-                .flatMap(tuple -> {
-                    AccountEntity accountEntity = tuple.getT1();
-                    CustomerEntity customerEntity = tuple.getT2();
+            return Mono.zip(accountMono, saveCustomerData)
+                    .flatMap(tuple -> {
+                        AccountEntity accountEntity = tuple.getT1();
 
-                    BigDecimal accountAmount = accountEntity.getAmount();
-                    if (accountAmount != null && accountAmount.compareTo(transactionEntity.getAmount()) >= 0) {
-                        BigDecimal newAccountAmount = accountAmount.subtract(transactionEntity.getAmount());
-                        return accountService.update(
-                                        accountEntity.toBuilder()
-                                                .amount(newAccountAmount)
-                                                .updatedAt(LocalDateTime.now())
-                                                .build())
-                                .flatMap(updatedAccount -> transactionRepository.save(transactionEntity.toBuilder()
-                                        .transactionId(UUID.randomUUID())
-                                        .transactionType(TransactionType.PAYOUT)
-                                        .paymentMethod(transactionEntity.getPaymentMethod())
-                                        .amount(transactionEntity.getAmount())
-                                        .currency(transactionEntity.getCurrency())
-                                        .language(transactionEntity.getLanguage())
-                                        .notificationUrl(transactionEntity.getNotificationUrl())
-                                        .cardNumber(transactionEntity.getCardData().getCardNumber())
-                                        .customer(customerEntity)
-                                        .createdBy("SYSTEM")
-                                        .updatedBy("SYSTEM")
-                                        .status(Status.SUCCESS)
-                                        .build()));
-                    } else {
-                        return Mono.error(new RequestPayoutTransactionInvalidAmountException("PAYOUT_MIN_AMOUNT"));
-                    }
-                });
+                        BigDecimal accountAmount = accountEntity.getAmount();
+                        if (accountAmount != null && accountAmount.compareTo(transactionEntity.getAmount()) >= 0) {
+                            BigDecimal newAccountAmount = accountAmount.subtract(transactionEntity.getAmount());
+                            return accountService.update(
+                                            accountEntity.toBuilder()
+                                                    .amount(newAccountAmount)
+                                                    .updatedAt(LocalDateTime.now())
+                                                    .build())
+                                    .flatMap(updatedAccount -> transactionRepository.save(transactionEntity.toBuilder()
+                                            .transactionType(TransactionType.PAYOUT)
+                                            .paymentMethod(transactionEntity.getPaymentMethod())
+                                            .amount(transactionEntity.getAmount())
+                                            .currency(transactionEntity.getCurrency())
+                                            .language(transactionEntity.getLanguage())
+                                            .notificationUrl(transactionEntity.getNotificationUrl())
+                                            .cardNumber(transactionEntity.getCardData().getCardNumber())
+                                            .customer(customerEntity)
+                                            .createdBy("SYSTEM")
+                                            .updatedBy("SYSTEM")
+                                            .status(Status.SUCCESS)
+                                            .build()));
+                        } else {
+                            return Mono.error(new RequestPayoutTransactionInvalidAmountException("PAYOUT_MIN_AMOUNT"));
+                        }
+                    });
+        }
     }
 }

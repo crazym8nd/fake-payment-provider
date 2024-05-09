@@ -8,6 +8,7 @@ public class FakePaymentProviderApplication {
     public static void main(String[] args) {
         SpringApplication.run(FakePaymentProviderApplication.class, args);
     }
+    //fix endpoint to retrieve list of transactions
     // add security headers validation
     //add webhooks
     // make tests to add validation where its needed

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -18,6 +19,11 @@ public interface TransactionRepository extends R2dbcRepository<TransactionEntity
     @Query("UPDATE transactions SET status = 'DELETED' WHERE transaction_id = :id")
     Mono<Void> deleteById(UUID id);
 
+    @Query("SELECT * FROM transactions WHERE transaction_type = :type AND created_at >= :startDate AND created_at <= :endDate")
+    Flux<TransactionEntity> findTopUpTransactions(TransactionType type, LocalDateTime startDate, LocalDateTime endDate);
 
-    Flux<TransactionEntity> findAllByTransactionTypeAndCreatedAtBetween(TransactionType type, LocalDateTime startDate, LocalDateTime endDate);
+
+    @Query("SELECT * FROM transactions WHERE transaction_type = :type AND DATE(created_at) = :date")
+    Flux<TransactionEntity> findTransactionsByTypeAndDay(TransactionType type, LocalDate date);
+
 }
