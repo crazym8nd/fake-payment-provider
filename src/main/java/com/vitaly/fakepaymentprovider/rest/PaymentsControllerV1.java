@@ -2,6 +2,7 @@ package com.vitaly.fakepaymentprovider.rest;
 
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestPayoutTransactionDto;
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestTopupTransactionDto;
+import com.vitaly.fakepaymentprovider.dto.responsedto.ResponsePayoutDetailsDto;
 import com.vitaly.fakepaymentprovider.dto.responsedto.ResponsePayoutsListDto;
 import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTransactionDetailsDto;
 import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTransactionsListDto;
@@ -13,10 +14,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.*;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
@@ -113,42 +116,43 @@ public class PaymentsControllerV1 {
    public Mono<ResponseEntity<ResponsePayoutsListDto>> getAllPayoutsList(
            @RequestParam(value = "start_date", required = false)  String startDateStr,
            @RequestParam(value = "end_date", required = false)  String endDateStr) {
-       Flux<ResponseTransactionDetailsDto> transactionsFlux;
+       LocalDateTime startDate;
+       LocalDateTime endDate;
        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
        if(startDateStr!= null && endDateStr!= null) {
-           LocalDateTime startDateTime = LocalDate.parse(startDateStr, formatter).atStartOfDay(ZoneOffset.UTC).toLocalDateTime();
-           LocalDateTime endDateTime = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59).atZone(ZoneOffset.UTC).toLocalDateTime();
-           transactionsFlux = transactionService.getAllTransactionsByTypeAndPeriod(TransactionType.PAYOUT, startDateTime, endDateTime)
-                   .map(transactionMapper::mapToResponseWithDetailsDto)
-                   .map(dto -> {
-                       dto.setMessage("OK");
-                       return dto;
-                   });
+           startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay(ZoneOffset.UTC).toLocalDateTime();
+           endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59).atZone(ZoneOffset.UTC).toLocalDateTime();
+           return transactionService.getAllTransactionsByTypeAndPeriod(TransactionType.PAYOUT, startDate, endDate)
+                   .collectList()
+                   .flatMap(list -> Mono.just(ResponsePayoutsListDto.builder()
+                           .payoutList(list.stream()
+                                   .map(transactionMapper::mapToResponseWithDetailsDto)
+                                   .peek(dto -> dto.setMessage("OK"))
+                                   .collect(Collectors.toList()))
+                           .build()))
+                   .map(ResponseEntity::ok);
 
        } else {
            LocalDate today = LocalDate.now(ZoneOffset.UTC);
-           transactionsFlux = transactionService.getAllTransactionsByTypeAndDay(TransactionType.PAYOUT, today)
-                   .map(transactionMapper::mapToResponseWithDetailsDto)
-                   .map(dto -> {
-                       dto.setMessage("OK");
-                       return dto;
-                   });
+           return transactionService.getAllTransactionsByTypeAndDay(TransactionType.PAYOUT, today)
+                   .collectList()
+                   .flatMap(list -> Mono.just(ResponsePayoutsListDto.builder()
+                           .payoutList(list.stream()
+                                   .map(transactionMapper::mapToResponseWithDetailsDto)
+                                   .peek(dto -> dto.setMessage("OK"))
+                                   .collect(Collectors.toList()))
+                           .build()))
+                   .map(ResponseEntity::ok);
        }
-       return transactionsFlux.collectList()
-               .flatMap(list -> Mono.just(ResponsePayoutsListDto.builder()
-                       .payoutList(list)
-                       .build()))
-               .map(responseTransactionsListDto -> ResponseEntity.ok().body(responseTransactionsListDto));
    }
 
 
 
     @GetMapping("/payout/{payoutId}/details")
-    public Mono<ResponseEntity<ResponseTransactionDetailsDto>> getPayoutDetails(@PathVariable UUID payoutId){
+    public Mono<ResponseEntity<ResponsePayoutDetailsDto>> getPayoutDetails(@PathVariable UUID payoutId){
         return transactionService.getByIdWithDetails(payoutId)
                 .map(transactionEntity -> {
-                    ResponseTransactionDetailsDto dto = transactionMapper.mapToResponseWithDetailsDto(transactionEntity);
+                    ResponsePayoutDetailsDto dto = transactionMapper.mapToResponsePayoutWithDetailsDto(transactionEntity);
                     dto.getCardData().maskCardNumber();
                     return dto;
                 })
