@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -35,6 +36,7 @@ public class PaymentsControllerV1 {
     private final TransactionMapper transactionMapper;
 
     //topups endpoints
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/topups/")
     public Mono<ResponseEntity<Map<String, String>>> topUpTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto){
 
@@ -49,6 +51,7 @@ public class PaymentsControllerV1 {
                 })
                 .map(ResponseEntity::ok);
     }
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/transaction/list")
     public Mono<ResponseEntity<ResponseTransactionsListDto>> getAllTransactionsList(
             @RequestParam(value = "start_date", required = false) Long startDateUnix,
@@ -81,7 +84,7 @@ public class PaymentsControllerV1 {
         }
 
     }
-
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/transaction/{transactionId}/details")
     public Mono<ResponseEntity<ResponseTransactionDetailsDto>> getTransactionDetails(@PathVariable UUID transactionId){
         return transactionService.getByIdWithDetails(transactionId)
@@ -95,7 +98,7 @@ public class PaymentsControllerV1 {
     }
 
     //payout endpoints
-
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/payout/")
     public Mono<ResponseEntity<Map<String, String>>> createPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto) {
         String merchantId = "PROSELYTE";
@@ -111,7 +114,7 @@ public class PaymentsControllerV1 {
                 .defaultIfEmpty(ResponseEntity.status(HttpStatus.BAD_REQUEST).build())
                 .doOnError(error -> log.warn("Error processing payout transaction: {}", error.getMessage()));
     }
-
+    @PreAuthorize("isAuthenticated()")
    @GetMapping("/payout/list")
    public Mono<ResponseEntity<ResponsePayoutsListDto>> getAllPayoutsList(
            @RequestParam(value = "start_date", required = false)  String startDateStr,
@@ -147,7 +150,7 @@ public class PaymentsControllerV1 {
    }
 
 
-
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/payout/{payoutId}/details")
     public Mono<ResponseEntity<ResponsePayoutDetailsDto>> getPayoutDetails(@PathVariable UUID payoutId){
         return transactionService.getByIdWithDetails(payoutId)

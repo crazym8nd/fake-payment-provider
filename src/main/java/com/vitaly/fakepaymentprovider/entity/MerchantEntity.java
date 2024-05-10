@@ -25,6 +25,7 @@ public class MerchantEntity implements Persistable<String> {
     @Id
     private String merchantId;
     private String secretKey;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
@@ -42,4 +43,5 @@ public class MerchantEntity implements Persistable<String> {
     public boolean isNew() {
         return Objects.isNull(merchantId);
     }
+
 }
