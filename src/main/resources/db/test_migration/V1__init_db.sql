@@ -2,9 +2,9 @@ CREATE TABLE IF NOT EXISTS merchants (
                                         merchant_id VARCHAR(255) PRIMARY KEY,
                                         secret_key VARCHAR(256) NOT NULL,
                                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                        updated_at TIMESTAMP,
                                         created_by VARCHAR(256) NOT NULL,
-                                        updated_by VARCHAR(256) NOT NULL,
+                                        updated_by VARCHAR(256),
                                         status VARCHAR(256) DEFAULT 'ACTIVE' NOT NULL
 );
 CREATE TABLE IF NOT EXISTS accounts (
@@ -13,9 +13,9 @@ CREATE TABLE IF NOT EXISTS accounts (
                                         currency VARCHAR(55) NOT NULL,
                                         amount BIGINT NOT NULL,
                                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                        updated_at TIMESTAMP,
                                         created_by VARCHAR(256) NOT NULL,
-                                        updated_by VARCHAR(256) NOT NULL,
+                                        updated_by VARCHAR(256),
                                         status VARCHAR(256) DEFAULT 'ACTIVE' NOT NULL
 );
 CREATE TABLE IF NOT EXISTS cards (
@@ -23,9 +23,9 @@ CREATE TABLE IF NOT EXISTS cards (
                                      exp_date VARCHAR(25) NOT NULL,
                                      cvv VARCHAR(3) NOT NULL,
                                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                     updated_at TIMESTAMP,
                                      created_by VARCHAR(256) NOT NULL,
-                                     updated_by VARCHAR(256) NOT NULL,
+                                     updated_by VARCHAR(256),
                                      status VARCHAR(256) DEFAULT 'ACTIVE' NOT NULL
 );
 CREATE TABLE IF NOT EXISTS customers (
@@ -34,9 +34,9 @@ CREATE TABLE IF NOT EXISTS customers (
                                          last_name VARCHAR(256) NOT NULL,
                                          country VARCHAR(256) NOT NULL,
                                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                         updated_at TIMESTAMP,
                                          created_by VARCHAR(256) NOT NULL,
-                                         updated_by VARCHAR(256) NOT NULL,
+                                         updated_by VARCHAR(256),
                                          status VARCHAR(256) DEFAULT 'ACTIVE' NOT NULL
 );
 CREATE TABLE IF NOT EXISTS transactions (
@@ -49,9 +49,9 @@ CREATE TABLE IF NOT EXISTS transactions (
                                             card_number VARCHAR(16) NOT NULL,
                                             transaction_type VARCHAR(25) NOT NULL,
                                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                            updated_at TIMESTAMP,
                                             created_by VARCHAR(256) NOT NULL,
-                                            updated_by VARCHAR(256) NOT NULL,
+                                            updated_by VARCHAR(256),
                                             status VARCHAR(256) DEFAULT 'IN_PROGRESS' NOT NULL
 );
 CREATE TABLE IF NOT EXISTS webhooks (
@@ -64,9 +64,9 @@ CREATE TABLE IF NOT EXISTS webhooks (
                                         body_response VARCHAR(256),
                                         status_response VARCHAR(256),
                                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                        updated_at TIMESTAMP,
                                         created_by VARCHAR(256) NOT NULL,
-                                        updated_by VARCHAR(256) NOT NULL,
+                                        updated_by VARCHAR(256),
                                         status VARCHAR(256) DEFAULT 'IN_PROGRESS' NOT NULL
 );
 ALTER TABLE accounts ADD CONSTRAINT accounts_merchant_id_fk
