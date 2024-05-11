@@ -40,8 +40,8 @@ class PaymentsControllerV1IntegrationTests {
     @DisplayName("Should successfully get transaction details")
     public void givenTransactionId_whenGetTransactionDetails_thenSuccessResponse() throws InterruptedException {
         //given
-
-        UUID transactionId = transactionService.processTopupTransaction(TransactionDataUtils.transactionForDetailsTest())
+String merchantId = "PROSELYTE";
+        UUID transactionId = transactionService.processTopupTransaction(TransactionDataUtils.transactionForDetailsTest(), merchantId)
                 .map(TransactionEntity::getTransactionId)
                 .block();
         //when

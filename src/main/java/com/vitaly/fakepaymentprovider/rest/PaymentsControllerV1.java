@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -38,10 +39,10 @@ public class PaymentsControllerV1 {
     //topups endpoints
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/topups/")
-    public Mono<ResponseEntity<Map<String, String>>> topUpTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto){
-
+    public Mono<ResponseEntity<Map<String, String>>> topUpTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
+        String merchantId = authentication.getName();
         return transactionService.processTopupTransaction(
-                        transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto))
+                        transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto), merchantId)
                 .map(savedTransaction -> {
                     Map<String, String> response = new HashMap<>();
                     response.put("transaction_id", savedTransaction.getTransactionId().toString());
@@ -100,8 +101,8 @@ public class PaymentsControllerV1 {
     //payout endpoints
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/payout/")
-    public Mono<ResponseEntity<Map<String, String>>> createPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto) {
-        String merchantId = "PROSELYTE";
+    public Mono<ResponseEntity<Map<String, String>>> createPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto, Authentication authentication) {
+        String merchantId = authentication.getName();
         return transactionService.processPayoutTransaction(transactionMapper.mapFromRequestPayoutDto(payoutDto), merchantId)
                 .map(savedPayoutTransaction -> {
                     Map<String, String> response = new HashMap<>();
@@ -163,5 +164,4 @@ public class PaymentsControllerV1 {
                 .defaultIfEmpty(ResponseEntity.notFound().build())
                 .doOnError(error -> log.warn("Error retrieving payout details: {}", error.getMessage()));
     }
-
 }

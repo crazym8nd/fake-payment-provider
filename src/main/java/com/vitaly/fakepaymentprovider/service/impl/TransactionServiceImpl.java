@@ -1,9 +1,6 @@
 package com.vitaly.fakepaymentprovider.service.impl;
 
-import com.vitaly.fakepaymentprovider.entity.AccountEntity;
-import com.vitaly.fakepaymentprovider.entity.CardEntity;
-import com.vitaly.fakepaymentprovider.entity.CustomerEntity;
-import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
+import com.vitaly.fakepaymentprovider.entity.*;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import com.vitaly.fakepaymentprovider.exceptionhandling.RequestPayoutTransactionInvalidAmountException;
@@ -13,6 +10,7 @@ import com.vitaly.fakepaymentprovider.service.AccountService;
 import com.vitaly.fakepaymentprovider.service.CardService;
 import com.vitaly.fakepaymentprovider.service.CustomerService;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
+import com.vitaly.fakepaymentprovider.webhook.WebhookNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,6 +35,8 @@ public class TransactionServiceImpl implements TransactionService {
     private final AccountService accountService;
 
     private final CustomerService customerService;
+
+    private final WebhookNotificationService webhookNotificationService;
 
     //transactions topup
 
@@ -124,7 +124,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Transactional
     @Override
-    public Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity) {
+    public Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity, String merchantId) {
         transactionEntity.setTransactionId(UUID.randomUUID());
         transactionEntity.setCardNumber(transactionEntity.getCardData().getCardNumber());
         CustomerEntity customerEntity = CustomerEntity.builder()
@@ -135,12 +135,14 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
         log.warn("Saving transaction{}", transactionEntity);
+        log.warn("For merchant{}", merchantId);
+
         if (!transactionEntity.getPaymentMethod().equals("CARD")) {
             return Mono.error(new RequestTopUpTransactionInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
         } else {
             Mono<CardEntity> saveCardData = cardService.saveCardInTransaction(transactionEntity.getCardData());
             Mono<CustomerEntity> saveCustomerData = customerService.saveCustomerInTransaction(customerEntity);
-            Mono<AccountEntity> saveAccountData = saveAccountData(transactionEntity);
+            Mono<AccountEntity> saveAccountData = saveAccountData(transactionEntity, merchantId);
 
             return Mono.zip(saveCardData, saveCustomerData, saveAccountData)
                     .flatMap(tuple -> {
@@ -160,7 +162,19 @@ public class TransactionServiceImpl implements TransactionService {
                                 .updatedBy("SYSTEM")
                                 .status(Status.IN_PROGRESS)
                                 .build();
-                        return transactionRepository.save(transactionToSave);
+                        return transactionRepository.save(transactionToSave)
+                                .flatMap(savedTransaction -> webhookNotificationService.saveWebhook(WebhookEntity.builder()
+                                                .transactionId(savedTransaction.getTransactionId())
+                                                .transactionAttempt(0L)
+                                                .urlRequest(savedTransaction.getNotificationUrl())
+                                                .bodyRequest("SOME TEXT")
+                                                .createdBy("SYSTEM")
+                                                .updatedBy("SYSTEM")
+                                                .status(savedTransaction.getStatus())
+                                                .message("SOME MESSAGE")
+                                                .build())
+                                        .flatMap(savedWebhook -> webhookNotificationService.sendWebhook(savedWebhook)
+                                                .thenReturn(savedTransaction)));
                     })
                     .doOnSuccess(savedTransaction -> log.warn("Transaction saved successfully: {}", savedTransaction))
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
@@ -174,10 +188,10 @@ public class TransactionServiceImpl implements TransactionService {
                         .thenReturn(transaction));
     }
 
-    private Mono<AccountEntity> saveAccountData(TransactionEntity transactionEntity) {
+    private Mono<AccountEntity> saveAccountData(TransactionEntity transactionEntity, String merchantId) {
         return accountService.saveAccountInTransaction(
                 AccountEntity.builder()
-                        .merchantId("PROSELYTE")
+                        .merchantId(merchantId)
                         .currency(transactionEntity.getCurrency())
                         .amount(transactionEntity.getAmount())
                         .build());
@@ -188,6 +202,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public Mono<TransactionEntity> processPayoutTransaction(TransactionEntity transactionEntity, String merchantId) {
+
         transactionEntity.setTransactionId(UUID.randomUUID());
         transactionEntity.setCardNumber(transactionEntity.getCardData().getCardNumber());
         CustomerEntity customerEntity = CustomerEntity.builder()
@@ -198,6 +213,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
         log.warn("Payout transaction: {}", transactionEntity);
+        log.warn("For merchant{}", merchantId);
         if (!transactionEntity.getPaymentMethod().equals("CARD")) {
             return Mono.error(new RequestTopUpTransactionInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
         } else {

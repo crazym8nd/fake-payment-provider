@@ -19,5 +19,5 @@ public interface TransactionService extends GenericService<TransactionEntity, UU
 
     Mono<TransactionEntity> processPayoutTransaction(TransactionEntity transactionEntity, String merchantId);
 
-    Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity);
+    Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity, String merchantId);
 }

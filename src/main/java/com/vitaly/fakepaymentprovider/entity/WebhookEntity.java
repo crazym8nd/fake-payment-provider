@@ -12,6 +12,7 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.UUID;
 
 @Data
 @Builder(toBuilder = true)
@@ -22,7 +23,7 @@ public class WebhookEntity implements Persistable<Long> {
 
     @Id
     private Long id;
-    private String transactionUuid;
+    private UUID transactionId;
     private Long transactionAttempt;
     private String urlRequest;
     private String bodyRequest;
@@ -34,6 +35,11 @@ public class WebhookEntity implements Persistable<Long> {
     private String createdBy;
     private String updatedBy;
     private Status status;
+
+    @Override
+    public Long getId() {
+        return id;
+    }
 
     @Override
     public boolean isNew() {

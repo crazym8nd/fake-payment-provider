@@ -55,13 +55,14 @@ CREATE TABLE IF NOT EXISTS transactions (
                                             status VARCHAR(256) DEFAULT 'IN_PROGRESS' NOT NULL
 );
 CREATE TABLE IF NOT EXISTS webhooks (
-                                        id VARCHAR(36) PRIMARY KEY,
+                                        id SERIAL PRIMARY KEY ,
+                                        transaction_id UUID NOT NULL,
                                         transaction_attempt BIGINT NOT NULL,
                                         url_request VARCHAR(256) NOT NULL,
                                         body_request VARCHAR(256) NOT NULL,
                                         message VARCHAR(256) NOT NULL,
-                                        body_response VARCHAR(256) NOT NULL,
-                                        status_response VARCHAR(256) NOT NULL,
+                                        body_response VARCHAR(256),
+                                        status_response VARCHAR(256),
                                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                         created_by VARCHAR(256) NOT NULL,
