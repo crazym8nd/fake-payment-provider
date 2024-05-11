@@ -6,7 +6,6 @@ import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseCardDataDto;
 import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseCustomerDto;
 import com.vitaly.fakepaymentprovider.entity.util.Language;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
-import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import lombok.Builder;
 import lombok.Data;
 

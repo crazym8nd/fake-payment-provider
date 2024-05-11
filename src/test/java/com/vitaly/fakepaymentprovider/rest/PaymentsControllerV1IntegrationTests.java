@@ -1,29 +1,29 @@
 package com.vitaly.fakepaymentprovider.rest;
 
-import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTopupTransactionDto;
-import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
+import com.vitaly.fakepaymentprovider.dto.requestdto.RequestTopupTransactionDto;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import com.vitaly.fakepaymentprovider.util.TransactionDataUtils;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import reactor.core.publisher.Mono;
 
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.time.Duration;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Testcontainers
 class PaymentsControllerV1IntegrationTests {
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     @Autowired
     private WebTestClient webTestClient;
 
@@ -35,28 +35,28 @@ class PaymentsControllerV1IntegrationTests {
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
             "postgres:16-alpine"
     );
-    //positive scenario
-    @Test
-    @DisplayName("Should successfully get transaction details")
-    public void givenTransactionId_whenGetTransactionDetails_thenSuccessResponse() throws InterruptedException {
-        //given
-String merchantId = "PROSELYTE";
-        UUID transactionId = transactionService.processTopupTransaction(TransactionDataUtils.transactionForDetailsTest(), merchantId)
-                .map(TransactionEntity::getTransactionId)
-                .block();
-        //when
-        WebTestClient.ResponseSpec result = webTestClient.get()
-                .uri("/api/v1/payments/transaction/{transactionId}/details",
-                        transactionId)
-                .exchange();
-        //then
-        result.expectStatus().isOk()
-                .expectBody(ResponseTopupTransactionDto.class)
-                .consumeWith(response -> {
-                    ResponseTopupTransactionDto responseTopupTransactionDtoDetails = response.getResponseBody();
-                    assertNotNull(responseTopupTransactionDtoDetails);
-                    assertEquals(responseTopupTransactionDtoDetails.getTransactionId(),transactionId);
-                });
-    }
 
+    //positive scenario
+
+    @Test
+    public void test_top_up_transaction_with_valid_parameters() {
+        // Given
+        RequestTopupTransactionDto dto = TransactionDataUtils.getDtoForRequestTest();
+        String credentials = "PROSELYTE:b2eeea3e27834b7499dd7e01143a23dd";
+        WebTestClient webTestClientWithTimeout = webTestClient.mutate()
+                .responseTimeout(Duration.ofSeconds(60))
+                .build();
+        // When
+        WebTestClient.ResponseSpec result = webTestClientWithTimeout.post().uri("/api/v1/payments/topups/")
+                .header(HttpHeaders.AUTHORIZATION, "Basic UFJPU0VMWVRFOmIyZWVlYTNlMjc4MzRiNzQ5OWRkN2UwMTE0M2EyM2Rk")
+                .body(Mono.just(dto),RequestTopupTransactionDto.class)
+                .exchange();
+
+        // Then
+        result.expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.transaction_id").exists()
+                .jsonPath("$.message").isEqualTo("OK")
+                .jsonPath("$.status").isEqualTo("IN_PROGRESS");
+    }
 }
