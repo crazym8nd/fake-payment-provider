@@ -6,6 +6,8 @@ import com.vitaly.fakepaymentprovider.dto.responsedto.ResponsePayoutDetailsDto;
 import com.vitaly.fakepaymentprovider.dto.responsedto.ResponsePayoutsListDto;
 import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTransactionDetailsDto;
 import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTransactionsListDto;
+import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
+import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import com.vitaly.fakepaymentprovider.mapper.TransactionMapper;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
@@ -38,8 +40,8 @@ public class PaymentsControllerV1 {
 
     //topups endpoints
     @PreAuthorize("isAuthenticated()")
-    @PostMapping("/topups/")
-    public Mono<ResponseEntity<Map<String, String>>> topUpTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
+    @PostMapping("/test/")
+    public Mono<ResponseEntity<Map<String, String>>> processTopUpTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
         String merchantId = authentication.getName();
         return transactionService.processTopupTransaction(
                         transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto), merchantId)
@@ -52,6 +54,38 @@ public class PaymentsControllerV1 {
                 })
                 .map(ResponseEntity::ok);
     }
+
+    //topups endpoints
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/topups/")
+    public Mono<ResponseEntity<Map<String, String>>> testTopUpTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
+        TransactionEntity newTopupTransaction = transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto);
+        return Mono.just(newTopupTransaction)
+                .map(transactionEntity -> {
+                    transactionEntity.setTransactionId(UUID.randomUUID());
+                    transactionEntity.setStatus(Status.IN_PROGRESS);
+                    return transactionEntity;
+                })
+                .flatMap(topupTransaction -> {
+                    Map<String, String> response = new HashMap<>();
+                    response.put("transaction_id", newTopupTransaction.getTransactionId().toString());
+                    response.put("status", newTopupTransaction.getStatus().toString());
+                    response.put("message", "OK");
+                    return Mono.just(response);
+                })
+                .map(ResponseEntity::ok)
+                .flatMap(initialResponse -> transactionService.processTopupTransaction(newTopupTransaction, authentication.getName())
+                        .map(savedTransaction -> {
+                            initialResponse.getBody().put("transaction_id", savedTransaction.getTransactionId().toString());
+                            initialResponse.getBody().put("status", savedTransaction.getStatus().toString());
+                            return initialResponse;
+                        }));
+    }
+
+
+
+
+
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/transaction/list")
     public Mono<ResponseEntity<ResponseTransactionsListDto>> getAllTransactionsList(

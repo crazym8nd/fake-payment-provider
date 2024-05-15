@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS transactions (
                                             language VARCHAR(25) NOT NULL,
                                             notification_url VARCHAR(256) NOT NULL,
                                             card_number VARCHAR(16) NOT NULL,
+                                            account_id BIGINT NOT NULL,
                                             transaction_type VARCHAR(25) NOT NULL,
                                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                             updated_at TIMESTAMP,

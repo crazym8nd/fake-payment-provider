@@ -32,6 +32,7 @@ public class TransactionEntity implements Persistable<UUID> {
     private String notificationUrl;
     private String cardNumber;
     private TransactionType transactionType;
+    private Long accountId;
 
     @Transient
     private CardEntity cardData;

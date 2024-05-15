@@ -125,7 +125,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     @Override
     public Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity, String merchantId) {
-        transactionEntity.setTransactionId(UUID.randomUUID());
+       // transactionEntity.setTransactionId(UUID.randomUUID());
         transactionEntity.setCardNumber(transactionEntity.getCardData().getCardNumber());
         CustomerEntity customerEntity = CustomerEntity.builder()
                 .firstName(transactionEntity.getCustomer().getFirstName())
@@ -134,8 +134,8 @@ public class TransactionServiceImpl implements TransactionService {
                 .cardNumber(transactionEntity.getCardNumber())
                 .build();
 
-        log.warn("Saving transaction{}", transactionEntity);
-        log.warn("For merchant{}", merchantId);
+        log.warn("Saving transaction {}", transactionEntity);
+        log.warn("For merchant {}", merchantId);
 
         if (!transactionEntity.getPaymentMethod().equals("CARD")) {
             return Mono.error(new RequestTopUpTransactionInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
@@ -150,31 +150,38 @@ public class TransactionServiceImpl implements TransactionService {
                         CustomerEntity savedCustomer = tuple.getT2();
                         transactionEntity.setCardNumber(cardEntity.getCardNumber());
                         transactionEntity.setCustomer(savedCustomer);
-                        TransactionEntity transactionToSave = transactionEntity.toBuilder()
-                                .transactionType(TransactionType.TOPUP)
-                                .paymentMethod(transactionEntity.getPaymentMethod())
-                                .amount(transactionEntity.getAmount())
-                                .currency(transactionEntity.getCurrency())
-                                .language(transactionEntity.getLanguage())
-                                .notificationUrl(transactionEntity.getNotificationUrl())
-                                .cardNumber(cardEntity.getCardNumber())
-                                .createdBy("SYSTEM")
-                                .updatedBy("SYSTEM")
-                                .status(Status.IN_PROGRESS)
-                                .build();
-                        return transactionRepository.save(transactionToSave)
-                                .flatMap(savedTransaction -> webhookNotificationService.saveWebhook(WebhookEntity.builder()
-                                                .transactionId(savedTransaction.getTransactionId())
-                                                .transactionAttempt(0L)
-                                                .urlRequest(savedTransaction.getNotificationUrl())
-                                                .bodyRequest("SOME TEXT")
-                                                .createdBy("SYSTEM")
-                                                .updatedBy("SYSTEM")
-                                                .status(savedTransaction.getStatus())
-                                                .message("SOME MESSAGE")
-                                                .build())
-                                        .flatMap(savedWebhook -> webhookNotificationService.sendWebhook(savedWebhook)
-                                                .thenReturn(savedTransaction)));
+
+                        return saveAccountData
+                                .flatMap(account -> Mono.just(account.getId()))
+                                .flatMap(accountId -> {
+                                    TransactionEntity transactionToSave = transactionEntity.toBuilder()
+                                            .transactionType(TransactionType.TOPUP)
+                                            .paymentMethod(transactionEntity.getPaymentMethod())
+                                            .amount(transactionEntity.getAmount())
+                                            .currency(transactionEntity.getCurrency())
+                                            .language(transactionEntity.getLanguage())
+                                            .notificationUrl(transactionEntity.getNotificationUrl())
+                                            .cardNumber(cardEntity.getCardNumber())
+                                            .accountId(accountId)
+                                            .createdBy("SYSTEM")
+                                            .updatedBy("SYSTEM")
+                                            .status(Status.IN_PROGRESS)
+                                            .build();
+
+                                    return transactionRepository.save(transactionToSave)
+                                            .flatMap(savedTransaction -> webhookNotificationService.saveWebhook(WebhookEntity.builder()
+                                                            .transactionId(savedTransaction.getTransactionId())
+                                                            .transactionAttempt(0L)
+                                                            .urlRequest(savedTransaction.getNotificationUrl())
+                                                            .bodyRequest("SOME TEXT")
+                                                            .createdBy("SYSTEM")
+                                                            .updatedBy("SYSTEM")
+                                                            .status(savedTransaction.getStatus())
+                                                            .message("SOME MESSAGE")
+                                                            .build())
+                                                    .flatMap(savedWebhook -> webhookNotificationService.sendWebhook(savedWebhook)
+                                                            .thenReturn(savedTransaction)));
+                                });
                     })
                     .doOnSuccess(savedTransaction -> log.warn("Transaction saved successfully: {}", savedTransaction))
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
@@ -211,7 +218,6 @@ public class TransactionServiceImpl implements TransactionService {
                 .country(transactionEntity.getCustomer().getCountry())
                 .cardNumber(transactionEntity.getCardNumber())
                 .build();
-
         log.warn("Payout transaction: {}", transactionEntity);
         log.warn("For merchant{}", merchantId);
         if (!transactionEntity.getPaymentMethod().equals("CARD")) {
@@ -241,6 +247,7 @@ public class TransactionServiceImpl implements TransactionService {
                                             .language(transactionEntity.getLanguage())
                                             .notificationUrl(transactionEntity.getNotificationUrl())
                                             .cardNumber(transactionEntity.getCardData().getCardNumber())
+                                            .accountId(updatedAccount.getId())
                                             .customer(customerEntity)
                                             .createdBy("SYSTEM")
                                             .updatedBy("SYSTEM")

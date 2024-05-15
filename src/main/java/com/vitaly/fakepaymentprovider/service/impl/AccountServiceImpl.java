@@ -72,4 +72,9 @@ public class AccountServiceImpl implements AccountService {
     public Mono<AccountEntity> getByMerchantIdAndCurrency(String merchantId, Currency currency) {
         return accountRepository.findByMerchantIdAndCurrency(merchantId, currency);
     }
+
+    public Mono<Long> getIdByMerchantIdAndCurrency(String merchantId, Currency currency) {
+        return accountRepository.findByMerchantIdAndCurrency(merchantId, currency)
+                .map(AccountEntity::getId);
+    }
 }
