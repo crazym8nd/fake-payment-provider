@@ -18,5 +18,4 @@ public interface TransactionMapper {
 
     TransactionEntity mapFromRequestPayoutDto(RequestPayoutTransactionDto requestPayoutTransactionDto);
 
-
 }

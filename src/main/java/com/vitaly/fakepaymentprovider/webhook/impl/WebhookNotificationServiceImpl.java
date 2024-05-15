@@ -1,6 +1,5 @@
 package com.vitaly.fakepaymentprovider.webhook.impl;
 
-import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.entity.WebhookEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.exceptionhandling.InvalidWebhookDataException;
@@ -47,7 +46,7 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
         return webClient.post()
                 .uri(webhookEntity.getUrlRequest())
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(webhookEntity.getBodyRequest()), TransactionEntity.class)
+                .body(Mono.just(webhookEntity.getBodyRequest()), String.class)
                 .retrieve()
                 .bodyToMono(String.class)
                 .map(responseBody -> webhookEntity.toBuilder()

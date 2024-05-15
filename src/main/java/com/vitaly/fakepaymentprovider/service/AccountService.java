@@ -4,7 +4,11 @@ import com.vitaly.fakepaymentprovider.entity.AccountEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Currency;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
+
 public interface AccountService extends GenericService<AccountEntity,Long>{
     Mono<AccountEntity> getByMerchantIdAndCurrency(String merchantId, Currency currency);
     Mono<AccountEntity> saveAccountInTransaction(AccountEntity accountEntity);
+
+    Mono<Boolean> checkBalanceBeforeTransaction(String merchantId, Currency currency, BigDecimal transactionAmount);
 }

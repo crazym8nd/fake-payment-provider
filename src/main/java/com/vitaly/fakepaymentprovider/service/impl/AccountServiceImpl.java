@@ -77,4 +77,10 @@ public class AccountServiceImpl implements AccountService {
         return accountRepository.findByMerchantIdAndCurrency(merchantId, currency)
                 .map(AccountEntity::getId);
     }
+    @Override
+    public Mono<Boolean> checkBalanceBeforeTransaction(String merchantId, Currency currency, BigDecimal transactionAmount) {
+        return getByMerchantIdAndCurrency(merchantId, currency)
+                .map(account -> account.getAmount().compareTo(transactionAmount) >= 0);
+    }
+
 }

@@ -8,6 +8,7 @@ public class FakePaymentProviderApplication {
     public static void main(String[] args) {
         SpringApplication.run(FakePaymentProviderApplication.class, args);
     }
-    // add account id to transaction and logic
-    // make tests to add validation where its needed
+    //in top up transaction currently webhook is send with created at and updated at null
+    // change maskCarnubmer in dto from dto to mapper
+    //make payout transaction same as top up transaction
 }
