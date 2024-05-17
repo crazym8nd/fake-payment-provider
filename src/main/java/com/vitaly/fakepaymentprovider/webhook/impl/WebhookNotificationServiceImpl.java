@@ -1,7 +1,6 @@
 package com.vitaly.fakepaymentprovider.webhook.impl;
 
 import com.vitaly.fakepaymentprovider.entity.WebhookEntity;
-import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.exceptionhandling.InvalidWebhookDataException;
 import com.vitaly.fakepaymentprovider.repository.WebhookRepository;
 import com.vitaly.fakepaymentprovider.webhook.WebhookNotificationService;

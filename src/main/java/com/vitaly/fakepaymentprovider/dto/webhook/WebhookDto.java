@@ -2,8 +2,6 @@ package com.vitaly.fakepaymentprovider.dto.webhook;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseCardDataDto;
-import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseCustomerDto;
 import com.vitaly.fakepaymentprovider.entity.util.Currency;
 import com.vitaly.fakepaymentprovider.entity.util.Language;
 import com.vitaly.fakepaymentprovider.entity.util.Status;

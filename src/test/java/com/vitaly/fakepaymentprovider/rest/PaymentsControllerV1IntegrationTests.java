@@ -2,9 +2,6 @@ package com.vitaly.fakepaymentprovider.rest;
 
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestPayoutTransactionDto;
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestTopupTransactionDto;
-import com.vitaly.fakepaymentprovider.entity.MerchantEntity;
-import com.vitaly.fakepaymentprovider.repository.MerchantRepository;
-import com.vitaly.fakepaymentprovider.service.TransactionService;
 import com.vitaly.fakepaymentprovider.util.TransactionDataUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,8 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -23,7 +18,6 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Base64;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
