@@ -52,7 +52,7 @@ public class TransactionEntity implements Persistable<UUID> {
     }
     @Override
     public boolean isNew() {
-        return this.createdAt == null;
+        return !getStatus().equals(Status.SUCCESS) && !getStatus().equals(Status.FAILED);
     }
 
 

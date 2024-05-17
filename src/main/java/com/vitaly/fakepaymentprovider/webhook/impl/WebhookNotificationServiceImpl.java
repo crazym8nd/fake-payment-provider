@@ -14,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +30,6 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
                         .transactionAttempt(0L)
                         .createdBy("SYSTEM")
                         .updatedBy("SYSTEM")
-                        .status(Status.IN_PROGRESS)
                 .build()));
     }
 
@@ -60,6 +60,12 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
                     return webhookRepository.save(webhookEntity);
                 });
     }
+
+    @Override
+    public Mono<WebhookEntity> getByTransactionId(UUID transactionId) {
+        return webhookRepository.findByTransactionId(transactionId);
+    }
+
     private Mono<WebhookEntity> validateWebhook(WebhookEntity webhookEntity) {
         log.warn("Validating webhook {}", webhookEntity);
         if (webhookEntity.getTransactionId()== null) {
