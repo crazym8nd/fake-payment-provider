@@ -54,7 +54,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Flux<TransactionEntity> getAllTransactionsByTypeAndPeriod(TransactionType type, LocalDateTime startDate, LocalDateTime endDate) {
-        return transactionRepository.findTopUpTransactions( type, startDate, endDate)
+        return transactionRepository.findTopUpTransactions(type, startDate, endDate)
                 .flatMap(transactionEntity ->
                         Mono.zip(
                                 cardService.getById(transactionEntity.getCardNumber()),
@@ -74,7 +74,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Flux<TransactionEntity> getAllTransactionsByTypeAndDay(TransactionType type, LocalDate date) {
-        return transactionRepository.findTransactionsByTypeAndDay( type, date)
+        return transactionRepository.findTransactionsByTypeAndDay(type, date)
                 .flatMap(transactionEntity ->
                         Mono.zip(
                                 cardService.getById(transactionEntity.getCardNumber()),
@@ -145,7 +145,6 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
 
-
         log.warn("Saving transaction {}", transactionEntity);
         log.warn("For merchant {}", merchantId);
 
@@ -166,21 +165,22 @@ public class TransactionServiceImpl implements TransactionService {
                         transactionEntity.setCardNumber(cardEntity.getCardNumber());
                         transactionEntity.setCustomer(savedCustomer);
                         transactionEntity.setAccountId(accountEntity.getId());
-                            return transactionRepository.save(transactionEntity);})
+                        return transactionRepository.save(transactionEntity);
+                    })
                     .flatMap(savedTransaction -> {
                         try {
                             String dtoJson = objectMapper.writeValueAsString(WebhookDto.builder()
-                                            .transactionId(transactionEntity.getTransactionId())
-                                            .paymentMethod(transactionEntity.getPaymentMethod())
-                                            .amount(transactionEntity.getAmount())
-                                            .currency(transactionEntity.getCurrency())
-                                            .type(transactionEntity.getTransactionType().toString())
-                                            .language(transactionEntity.getLanguage())
-                                            .cardData(cardMapper.mapToWebhookCardDataDto(transactionEntity.getCardData()))
-                                            .customer(customerMapper.mapToWebhookCustomerDto(transactionEntity.getCustomer()))
-                                            .createdAt(transactionEntity.getCreatedAt())
-                                            .status(transactionEntity.getStatus())
-                                            .message("OK")
+                                    .transactionId(transactionEntity.getTransactionId())
+                                    .paymentMethod(transactionEntity.getPaymentMethod())
+                                    .amount(transactionEntity.getAmount())
+                                    .currency(transactionEntity.getCurrency())
+                                    .type(transactionEntity.getTransactionType().toString())
+                                    .language(transactionEntity.getLanguage())
+                                    .cardData(cardMapper.mapToWebhookCardDataDto(transactionEntity.getCardData()))
+                                    .customer(customerMapper.mapToWebhookCustomerDto(transactionEntity.getCustomer()))
+                                    .createdAt(transactionEntity.getCreatedAt())
+                                    .status(transactionEntity.getStatus())
+                                    .message("OK")
                                     .build());
 
                             WebhookEntity webhookEntity = WebhookEntity.builder()
@@ -206,8 +206,8 @@ public class TransactionServiceImpl implements TransactionService {
                         }
                     })
                     .flatMap(savedTransaction -> {
-                            savedTransaction.setStatus(Status.SUCCESS);
-                            return update(savedTransaction);
+                        savedTransaction.setStatus(Status.SUCCESS);
+                        return update(savedTransaction);
                     })
                     .flatMap(updatedTransaction -> webhookRepository.findByTransactionId(updatedTransaction.getTransactionId())
                             .flatMap(webhookEntity -> {
@@ -241,6 +241,7 @@ public class TransactionServiceImpl implements TransactionService {
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
         }
     }
+
     @Override
     public Mono<TransactionEntity> deleteById(UUID transactionId) {
         return transactionRepository.findById(transactionId)
@@ -284,7 +285,7 @@ public class TransactionServiceImpl implements TransactionService {
             Mono<CustomerEntity> saveCustomerData = customerService.saveCustomerInTransaction(customerEntity);
 
             log.warn("Saving payout transaction: {}", transactionEntity);
-            return Mono.zip(saveCardData, saveCustomerData,accountMono)
+            return Mono.zip(saveCardData, saveCustomerData, accountMono)
                     .flatMap(tuple -> {
                         CardEntity cardEntity = tuple.getT1();
                         CustomerEntity savedCustomer = tuple.getT2();
@@ -294,28 +295,42 @@ public class TransactionServiceImpl implements TransactionService {
                         transactionEntity.setCustomer(savedCustomer);
                         transactionEntity.setAccountId(accountEntity.getId());
 
-                        BigDecimal accountAmount = accountEntity.getAmount();
-                        if (accountAmount != null && accountAmount.compareTo(transactionEntity.getAmount()) >= 0) {
-                            BigDecimal newAccountAmount = accountAmount.subtract(transactionEntity.getAmount());
-                            return accountService.update(
-                                            accountEntity.toBuilder()
-                                                    .amount(newAccountAmount)
-                                                    .updatedAt(LocalDateTime.now())
-                                                    .build())
-                                    .then(transactionRepository.save(transactionEntity.toBuilder()
-                                                    .transactionType(TransactionType.PAYOUT)
-                                                    .paymentMethod(transactionEntity.getPaymentMethod())
-                                                    .amount(transactionEntity.getAmount())
-                                                    .currency(transactionEntity.getCurrency())
-                                                    .language(transactionEntity.getLanguage())
-                                                    .notificationUrl(transactionEntity.getNotificationUrl())
-                                                    .createdBy("SYSTEM")
-                                                    .status(Status.SUCCESS)
-                                                    .updatedAt(LocalDateTime.now())
-                                                    .build()));
-                        } else {
-                            return Mono.error(new RequestPayoutTransactionInvalidAmountException("PAYOUT_MIN_AMOUNT"));
-                        }
+
+                        return save(transactionEntity.toBuilder()
+                                .transactionType(TransactionType.PAYOUT)
+                                .paymentMethod(transactionEntity.getPaymentMethod())
+                                .amount(transactionEntity.getAmount())
+                                .currency(transactionEntity.getCurrency())
+                                .language(transactionEntity.getLanguage())
+                                .notificationUrl(transactionEntity.getNotificationUrl())
+                                .createdBy("SYSTEM")
+                                .status(Status.IN_PROGRESS)
+                                .updatedAt(LocalDateTime.now())
+                                .build())
+                                .flatMap(savedTransaction -> {
+                                    BigDecimal accountAmount = accountEntity.getAmount();
+                                    if (accountAmount != null && accountAmount.compareTo(transactionEntity.getAmount()) >= 0) {
+                                        BigDecimal newAccountAmount = accountAmount.subtract(transactionEntity.getAmount());
+                                        return accountService.update(
+                                                        accountEntity.toBuilder()
+                                                                .amount(newAccountAmount)
+                                                                .updatedAt(LocalDateTime.now())
+                                                                .build())
+                                                .then(transactionRepository.save(transactionEntity.toBuilder()
+                                                        .transactionType(TransactionType.PAYOUT)
+                                                        .paymentMethod(transactionEntity.getPaymentMethod())
+                                                        .amount(transactionEntity.getAmount())
+                                                        .currency(transactionEntity.getCurrency())
+                                                        .language(transactionEntity.getLanguage())
+                                                        .notificationUrl(transactionEntity.getNotificationUrl())
+                                                        .createdBy("SYSTEM")
+                                                        .status(Status.SUCCESS)
+                                                        .updatedAt(LocalDateTime.now())
+                                                        .build()));
+                                    } else {
+                                        return Mono.error(new RequestPayoutTransactionInvalidAmountException("PAYOUT_MIN_AMOUNT"));
+                                    }
+                                });
                     });
         }
     }
