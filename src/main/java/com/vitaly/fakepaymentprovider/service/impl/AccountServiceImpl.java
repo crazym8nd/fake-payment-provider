@@ -21,11 +21,6 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
 
     @Override
-    public Flux<AccountEntity> getAll() {
-        return accountRepository.findAll();
-    }
-
-    @Override
     public Mono<AccountEntity> getById(Long accountId) {
         return accountRepository.findById(accountId);
     }
@@ -61,26 +56,14 @@ public class AccountServiceImpl implements AccountService {
                                 .build())));
     }
 
-    @Override
-    public Mono<AccountEntity> deleteById(Long accountId) {
-        return accountRepository.findById(accountId)
-                .flatMap(acc ->accountRepository.deleteById(acc.getId()).thenReturn(acc));
-    }
-
 
     @Override
     public Mono<AccountEntity> getByMerchantIdAndCurrency(String merchantId, Currency currency) {
         return accountRepository.findByMerchantIdAndCurrency(merchantId, currency);
     }
 
-    public Mono<Long> getIdByMerchantIdAndCurrency(String merchantId, Currency currency) {
-        return accountRepository.findByMerchantIdAndCurrency(merchantId, currency)
-                .map(AccountEntity::getId);
-    }
     @Override
-    public Mono<Boolean> checkBalanceBeforeTransaction(String merchantId, Currency currency, BigDecimal transactionAmount) {
-        return getByMerchantIdAndCurrency(merchantId, currency)
-                .map(account -> account.getAmount().compareTo(transactionAmount) >= 0);
+    public Flux<AccountEntity> getAllAccountsForMerchant(String merchantId) {
+        return accountRepository.findAllByMerchantId(merchantId);
     }
-
 }

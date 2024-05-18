@@ -70,28 +70,30 @@ public class PaymentsControllerV1 {
     @GetMapping("/transaction/list")
     public Mono<ResponseEntity<ResponseTransactionsListDto>> getAllTransactionsList(
             @RequestParam(value = "start_date", required = false) Long startDateUnix,
-            @RequestParam(value = "end_date", required = false) Long endDateUnix) {
+            @RequestParam(value = "end_date", required = false) Long endDateUnix,
+            Authentication authentication) {
         LocalDateTime startDate;
         LocalDateTime endDate;
+        String merchantId = authentication.getName();
         if(startDateUnix!=null & startDateUnix!=null){
             startDate = Instant.ofEpochSecond(startDateUnix).atZone(ZoneOffset.UTC).toLocalDateTime();
             endDate = Instant.ofEpochSecond(endDateUnix).atZone(ZoneOffset.UTC).toLocalDateTime();
-            return transactionService.getAllTransactionsByTypeAndPeriod(TransactionType.TOPUP, startDate, endDate)
+            return transactionService.getAllTransactionsForMerchantByTypeAndPeriod(TransactionType.TOPUP, startDate, endDate, merchantId)
                     .collectList()
                     .flatMap(list -> Mono.just(ResponseTransactionsListDto.builder()
                             .transactionList(list.stream()
-                                    .map(transactionMapper::mapToResponseWithDetailsDto)
+                                    .map(transactionMapper::mapToResponseTransactionWithDetailsDto)
                                     .peek(dto -> dto.setMessage("OK"))
                                     .collect(Collectors.toList()))
                             .build()))
                     .map(ResponseEntity::ok);
         } else {
             LocalDate today = LocalDate.now(ZoneOffset.UTC);
-            return transactionService.getAllTransactionsByTypeAndDay(TransactionType.TOPUP, today)
+            return transactionService.getAllTransactionsForMerchantByTypeAndDay(TransactionType.TOPUP, today, merchantId)
                     .collectList()
                     .flatMap(list -> Mono.just(ResponseTransactionsListDto.builder()
                             .transactionList(list.stream()
-                                    .map(transactionMapper::mapToResponseWithDetailsDto)
+                                    .map(transactionMapper::mapToResponseTransactionWithDetailsDto)
                                     .peek(dto -> dto.setMessage("OK"))
                                     .collect(Collectors.toList()))
                             .build()))
@@ -104,7 +106,7 @@ public class PaymentsControllerV1 {
     public Mono<ResponseEntity<ResponseTransactionDetailsDto>> getTransactionDetails(@PathVariable UUID transactionId){
         return transactionService.getByIdWithDetails(transactionId)
                 .map(transactionEntity -> {
-                    ResponseTransactionDetailsDto dto = transactionMapper.mapToResponseWithDetailsDto(transactionEntity);
+                    ResponseTransactionDetailsDto dto = transactionMapper.mapToResponseTransactionWithDetailsDto(transactionEntity);
                     dto.setMessage("OK");
                 return dto;})
                 .map(ResponseEntity::ok)
@@ -171,18 +173,20 @@ public class PaymentsControllerV1 {
    @GetMapping("/payout/list")
    public Mono<ResponseEntity<ResponsePayoutsListDto>> getAllPayoutsList(
            @RequestParam(value = "start_date", required = false)  String startDateStr,
-           @RequestParam(value = "end_date", required = false)  String endDateStr) {
+           @RequestParam(value = "end_date", required = false)  String endDateStr,
+           Authentication authentication) {
        LocalDateTime startDate;
        LocalDateTime endDate;
+       String merchantId = authentication.getName();
        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
        if(startDateStr!= null && endDateStr!= null) {
            startDate = LocalDate.parse(startDateStr, formatter).atStartOfDay(ZoneOffset.UTC).toLocalDateTime();
            endDate = LocalDate.parse(endDateStr, formatter).atTime(23, 59, 59).atZone(ZoneOffset.UTC).toLocalDateTime();
-           return transactionService.getAllTransactionsByTypeAndPeriod(TransactionType.PAYOUT, startDate, endDate)
+           return transactionService.getAllTransactionsForMerchantByTypeAndPeriod(TransactionType.PAYOUT, startDate, endDate, merchantId)
                    .collectList()
                    .flatMap(list -> Mono.just(ResponsePayoutsListDto.builder()
                            .payoutList(list.stream()
-                                   .map(transactionMapper::mapToResponseWithDetailsDto)
+                                   .map(transactionMapper::mapToResponseTransactionWithDetailsDto)
                                    .peek(dto -> dto.setMessage("OK"))
                                    .collect(Collectors.toList()))
                            .build()))
@@ -190,11 +194,11 @@ public class PaymentsControllerV1 {
 
        } else {
            LocalDate today = LocalDate.now(ZoneOffset.UTC);
-           return transactionService.getAllTransactionsByTypeAndDay(TransactionType.PAYOUT, today)
+           return transactionService.getAllTransactionsForMerchantByTypeAndDay(TransactionType.PAYOUT, today, merchantId)
                    .collectList()
                    .flatMap(list -> Mono.just(ResponsePayoutsListDto.builder()
                            .payoutList(list.stream()
-                                   .map(transactionMapper::mapToResponseWithDetailsDto)
+                                   .map(transactionMapper::mapToResponseTransactionWithDetailsDto)
                                    .peek(dto -> dto.setMessage("OK"))
                                    .collect(Collectors.toList()))
                            .build()))

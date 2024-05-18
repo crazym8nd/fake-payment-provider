@@ -8,7 +8,6 @@ import com.vitaly.fakepaymentprovider.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
@@ -19,12 +18,6 @@ import java.time.LocalDateTime;
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final CardRepository cardRepository;
-
-    @Override
-    public Flux<CustomerEntity> getAll() {
-        return customerRepository.findAll();
-    }
 
     @Override
     public Mono<CustomerEntity> getById(String customerId) {
@@ -47,13 +40,6 @@ public class CustomerServiceImpl implements CustomerService {
     public Mono<CustomerEntity> saveCustomerInTransaction(CustomerEntity customerEntity) {
         return customerRepository.findById(customerEntity.getCardNumber())
                 .switchIfEmpty(saveNewCustomer(customerEntity));
-    }
-
-    @Override
-    public Mono<CustomerEntity> deleteById(String customerId) {
-        return customerRepository.findById(customerId)
-                .flatMap(customer -> customerRepository.deleteById(customerId)
-                        .thenReturn(customer));
     }
 
     private Mono<CustomerEntity> saveNewCustomer(CustomerEntity customerEntity) {

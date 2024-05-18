@@ -11,9 +11,9 @@ import java.util.UUID;
 
 public interface TransactionService extends GenericService<TransactionEntity, UUID>{
 
-    Flux<TransactionEntity> getAllTransactionsByTypeAndPeriod(TransactionType type, LocalDateTime startDate, LocalDateTime endDate);
+    Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndPeriod(TransactionType type, LocalDateTime startDate, LocalDateTime endDate, String merchantId);
 
-    Flux<TransactionEntity> getAllTransactionsByTypeAndDay(TransactionType type, LocalDate date);
+    Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndDay(TransactionType type, LocalDate date, String merchantId);
 
     Mono<TransactionEntity> getByIdWithDetails(UUID transactionId);
 

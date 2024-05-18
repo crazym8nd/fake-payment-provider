@@ -48,13 +48,9 @@ public class TransactionServiceImpl implements TransactionService {
     //transactions topup
 
     @Override
-    public Flux<TransactionEntity> getAll() {
-        return transactionRepository.findAll();
-    }
-
-    @Override
-    public Flux<TransactionEntity> getAllTransactionsByTypeAndPeriod(TransactionType type, LocalDateTime startDate, LocalDateTime endDate) {
-        return transactionRepository.findTopUpTransactions(type, startDate, endDate)
+    public Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndPeriod(TransactionType type, LocalDateTime startDate, LocalDateTime endDate, String merchantId) {
+        return accountService.getAllAccountsForMerchant(merchantId)
+                .flatMap(account -> transactionRepository.findAllTransactionsForAccountByTypeAndPeriod(type, startDate, endDate, account.getId()))
                 .flatMap(transactionEntity ->
                         Mono.zip(
                                 cardService.getById(transactionEntity.getCardNumber()),
@@ -73,8 +69,9 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public Flux<TransactionEntity> getAllTransactionsByTypeAndDay(TransactionType type, LocalDate date) {
-        return transactionRepository.findTransactionsByTypeAndDay(type, date)
+    public Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndDay(TransactionType type, LocalDate date, String merchantId) {
+        return accountService.getAllAccountsForMerchant(merchantId)
+                .flatMap(account -> transactionRepository.findAllTransactionsForAccountByTypeAndDay(type, date, account.getId()))
                 .flatMap(transactionEntity ->
                         Mono.zip(
                                 cardService.getById(transactionEntity.getCardNumber()),
@@ -240,13 +237,6 @@ public class TransactionServiceImpl implements TransactionService {
                     .doOnSuccess(updatedTransaction -> log.warn("Transaction saved successfully: {}", updatedTransaction))
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
         }
-    }
-
-    @Override
-    public Mono<TransactionEntity> deleteById(UUID transactionId) {
-        return transactionRepository.findById(transactionId)
-                .flatMap(transaction -> transactionRepository.deleteById(transactionId)
-                        .thenReturn(transaction));
     }
 
     private Mono<AccountEntity> saveAccountData(TransactionEntity transactionEntity, String merchantId) {

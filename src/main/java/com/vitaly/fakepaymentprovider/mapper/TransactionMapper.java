@@ -10,8 +10,7 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring", uses = {CustomerMapper.class, CardMapper.class})
 public interface TransactionMapper {
-    ResponseTopupTransactionDto mapToResponseTopupDto(TransactionEntity transactionEntity);
-    ResponseTransactionDetailsDto mapToResponseWithDetailsDto(TransactionEntity transactionEntity);
+    ResponseTransactionDetailsDto mapToResponseTransactionWithDetailsDto(TransactionEntity transactionEntity);
     ResponsePayoutDetailsDto mapToResponsePayoutWithDetailsDto(TransactionEntity transactionEntity);
 
     TransactionEntity mapFromRequestTopupDto(RequestTopupTransactionDto requestTopupTransactionDto);

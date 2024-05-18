@@ -7,7 +7,6 @@ import com.vitaly.fakepaymentprovider.service.CardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
@@ -19,11 +18,6 @@ import java.time.LocalDateTime;
 public class CardServiceImpl implements CardService {
 
     private final CardRepository cardRepository;
-
-    @Override
-    public Flux<CardEntity> getAll() {
-        return cardRepository.findAll();
-    }
 
     @Override
     public Mono<CardEntity> getById(String cardNumber) {
@@ -48,12 +42,6 @@ public class CardServiceImpl implements CardService {
                 .switchIfEmpty(saveNewCard(cardEntity));
     }
 
-    @Override
-    public Mono<CardEntity> deleteById(String cardNumber) {
-        return cardRepository.findById(cardNumber)
-                .flatMap(card -> cardRepository.deleteById(card.getCardNumber())
-                        .thenReturn(card));
-    }
 
     private Mono<CardEntity> saveNewCard(CardEntity cardEntity) {
         return Mono.defer(() -> {
