@@ -8,10 +8,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -26,9 +29,8 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
     public Mono<WebhookEntity> saveWebhook(WebhookEntity webhookEntity) {
         return  validateWebhook(webhookEntity)
                 .flatMap(validatedWebhookEntity ->webhookRepository.save(webhookEntity.toBuilder()
-                        .transactionAttempt(0L)
+                        .createdAt(LocalDateTime.now())
                         .createdBy("SYSTEM")
-                        .updatedBy("SYSTEM")
                 .build()));
     }
 
@@ -47,14 +49,17 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Mono.just(webhookEntity.getBodyRequest()), String.class)
                 .retrieve()
-                .bodyToMono(String.class)
-                .map(responseBody -> webhookEntity.toBuilder()
-                        .bodyResponse(responseBody)
-                        .statusResponse(HttpStatus.OK.toString())
+                .toEntity(String.class)
+                .map(response -> webhookEntity.toBuilder()
+                        .bodyResponse(response.getBody().toString())
+                        .statusResponse(response.getStatusCode().toString())
                         .build())
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
+                        .doBeforeRetry(retrySignal -> {
+                            webhookEntity.setTransactionAttempt(retrySignal.totalRetries());
+                        }))
                 .flatMap(webhookRepository::save)
                 .onErrorResume(error -> {
-                    webhookEntity.setStatusResponse(HttpStatus.INTERNAL_SERVER_ERROR.toString());
                     webhookEntity.setMessage(error.getMessage());
                     return webhookRepository.save(webhookEntity);
                 });

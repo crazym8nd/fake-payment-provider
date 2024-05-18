@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE TABLE IF NOT EXISTS webhooks (
                                         id SERIAL PRIMARY KEY ,
                                         transaction_id UUID NOT NULL,
-                                        transaction_attempt BIGINT NOT NULL,
+                                        transaction_attempt BIGINT NOT NULL DEFAULT 0,
                                         url_request VARCHAR(256) NOT NULL,
                                         body_request TEXT NOT NULL,
                                         message VARCHAR(256),

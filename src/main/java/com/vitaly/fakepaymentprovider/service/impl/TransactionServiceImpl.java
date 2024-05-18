@@ -182,10 +182,9 @@ public class TransactionServiceImpl implements TransactionService {
 
                             WebhookEntity webhookEntity = WebhookEntity.builder()
                                     .transactionId(savedTransaction.getTransactionId())
-                                    .transactionAttempt(0L)
                                     .urlRequest(transactionEntity.getNotificationUrl())
+                                    .transactionAttempt(0L)
                                     .bodyRequest(dtoJson)
-                                    .message("OK")
                                     .createdAt(transactionEntity.getCreatedAt())
                                     .createdBy("SYSTEM")
                                     .status(transactionEntity.getStatus())

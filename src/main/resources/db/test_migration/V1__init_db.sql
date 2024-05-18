@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS transactions (
                                             card_number VARCHAR(16) NOT NULL,
                                             account_id BIGINT NOT NULL,
                                             transaction_type VARCHAR(25) NOT NULL,
-                                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                            created_at TIMESTAMP,
                                             updated_at TIMESTAMP,
                                             created_by VARCHAR(256) NOT NULL,
                                             updated_by VARCHAR(256),
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE TABLE IF NOT EXISTS webhooks (
                                         id SERIAL PRIMARY KEY ,
                                         transaction_id UUID NOT NULL,
-                                        transaction_attempt BIGINT NOT NULL,
+                                        transaction_attempt BIGINT NOT NULL DEFAULT 0,
                                         url_request VARCHAR(256) NOT NULL,
                                         body_request TEXT NOT NULL,
                                         message VARCHAR(256),
