@@ -51,6 +51,7 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
                 .retrieve()
                 .toEntity(String.class)
                 .map(response -> webhookEntity.toBuilder()
+                        .message("OK")
                         .bodyResponse(response.getBody().toString())
                         .statusResponse(response.getStatusCode().toString())
                         .build())
