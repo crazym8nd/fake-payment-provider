@@ -6,9 +6,7 @@ import com.vitaly.fakepaymentprovider.repository.WebhookRepository;
 import com.vitaly.fakepaymentprovider.webhook.WebhookNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -52,7 +50,7 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
                 .toEntity(String.class)
                 .map(response -> webhookEntity.toBuilder()
                         .message("OK")
-                        .bodyResponse(response.getBody().toString())
+                        .bodyResponse(response.getBody())
                         .statusResponse(response.getStatusCode().toString())
                         .build())
                 .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))

@@ -2,7 +2,6 @@ package com.vitaly.fakepaymentprovider.service.impl;
 
 import com.vitaly.fakepaymentprovider.entity.CustomerEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
-import com.vitaly.fakepaymentprovider.repository.CardRepository;
 import com.vitaly.fakepaymentprovider.repository.CustomerRepository;
 import com.vitaly.fakepaymentprovider.service.CustomerService;
 import lombok.RequiredArgsConstructor;

@@ -40,7 +40,7 @@ public class PaymentsControllerV1 {
     //topups endpoints
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/topups/")
-    public Mono<ResponseEntity<Map<String, String>>> testTopUpTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
+    public Mono<ResponseEntity<Map<String, String>>> processTopupTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
         TransactionEntity newTopupTransaction = transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto).toBuilder()
                 .transactionId(UUID.randomUUID())
                 .transactionType(TransactionType.TOPUP)
@@ -49,21 +49,16 @@ public class PaymentsControllerV1 {
                 .createdBy("SYSTEM")
                 .build();
 
-        return Mono.just(newTopupTransaction)
-                .flatMap(topupTransaction -> {
-                    Map<String, String> response = new HashMap<>();
-                    response.put("transaction_id", newTopupTransaction.getTransactionId().toString());
-                    response.put("status", newTopupTransaction.getStatus().toString());
-                    response.put("message", "OK");
-                    return Mono.just(response);
-                })
-                .map(ResponseEntity::ok)
-                .flatMap(initialResponse -> transactionService.processTopupTransaction(newTopupTransaction, authentication.getName())
-                        .map(savedTransaction -> {
-                            initialResponse.getBody().put("transaction_id", savedTransaction.getTransactionId().toString());
-                            initialResponse.getBody().put("status", savedTransaction.getStatus().toString());
-                            return initialResponse;
-                        }));
+        Map<String, String> response = new HashMap<>();
+        response.put("transaction_id", newTopupTransaction.getTransactionId().toString());
+        response.put("status", newTopupTransaction.getStatus().toString());
+        response.put("message", "OK");
+
+        Mono<ResponseEntity<Map<String, String>>> responseTosend = Mono.just(ResponseEntity.ok(response));
+
+        transactionService.processTopupTransaction(newTopupTransaction, authentication.getName()).subscribe();
+
+        return responseTosend;
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -117,7 +112,7 @@ public class PaymentsControllerV1 {
     //payout endpoints
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/payout/")
-    public Mono<ResponseEntity<Map<String, String>>> createPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto, Authentication authentication) {
+    public Mono<ResponseEntity<Map<String, String>>> processPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto, Authentication authentication) {
         TransactionEntity newPayoutTransaction = transactionMapper.mapFromRequestPayoutDto(payoutDto).toBuilder()
                 .transactionId(UUID.randomUUID())
                 .transactionType(TransactionType.PAYOUT)
