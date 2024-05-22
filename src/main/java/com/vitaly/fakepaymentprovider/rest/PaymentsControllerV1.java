@@ -48,17 +48,21 @@ public class PaymentsControllerV1 {
                 .createdAt(LocalDateTime.now())
                 .createdBy("SYSTEM")
                 .build();
-
-        Map<String, String> response = new HashMap<>();
-        response.put("transaction_id", newTopupTransaction.getTransactionId().toString());
-        response.put("status", newTopupTransaction.getStatus().toString());
-        response.put("message", "OK");
-
-        Mono<ResponseEntity<Map<String, String>>> responseTosend = Mono.just(ResponseEntity.ok(response));
-
-        transactionService.processTopupTransaction(newTopupTransaction, authentication.getName()).subscribe();
-
-        return responseTosend;
+        return Mono.just(newTopupTransaction)
+                .flatMap(topupTransaction -> {
+                    Map<String, String> response = new HashMap<>();
+                    response.put("transaction_id", newTopupTransaction.getTransactionId().toString());
+                    response.put("status", newTopupTransaction.getStatus().toString());
+                    response.put("message", "OK");
+                    return Mono.just(response);
+                })
+                .map(ResponseEntity::ok)
+                .flatMap(initialResponse -> transactionService.processTopupTransaction(newTopupTransaction, authentication.getName())
+                        .map(savedTransaction -> {
+                            initialResponse.getBody().put("transaction_id", savedTransaction.getTransactionId().toString());
+                            initialResponse.getBody().put("status", savedTransaction.getStatus().toString());
+                            return initialResponse;
+                        }));
     }
 
     @PreAuthorize("isAuthenticated()")
