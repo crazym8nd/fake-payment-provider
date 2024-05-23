@@ -48,6 +48,47 @@ public class TransactionServiceImpl implements TransactionService {
     //transactions topup
 
     @Override
+    public Mono<TransactionEntity> validateTopupTransaction(TransactionEntity transactionEntity) {
+        if (!transactionEntity.getPaymentMethod().equals("CARD")) {
+            return Mono.error(new RequestTopUpTransactionInvalidPaymentMethodException(
+                    "Invalid payment method: " + transactionEntity.getPaymentMethod()));
+        } else {
+            return Mono.just(transactionEntity.toBuilder()
+                    .transactionId(UUID.randomUUID())
+                    .status(Status.IN_PROGRESS)
+                    .createdAt(LocalDateTime.now())
+                    .createdBy("SYSTEM")
+                    .build());
+        }
+    }
+
+    @Override
+    public Mono<TransactionEntity> validatePayoutTransaction(TransactionEntity transactionEntity,String merchantId) {
+        return accountService.getByMerchantIdAndCurrency(merchantId, transactionEntity.getCurrency())
+                .flatMap(account -> {
+                    BigDecimal initialBalance = account.getAmount();
+                    if (initialBalance.compareTo(transactionEntity.getAmount()) >= 0) {
+                        BigDecimal changedBalance = initialBalance.subtract(transactionEntity.getAmount());
+                        return accountService.update(
+                                        account.toBuilder()
+                                                .amount(changedBalance)
+                                                .updatedAt(LocalDateTime.now())
+                                                .updatedBy("SYSTEM")
+                                                .build())
+                                .flatMap(savedAccount -> Mono.just(transactionEntity.toBuilder()
+                                        .transactionId(UUID.randomUUID())
+                                        .status(Status.IN_PROGRESS)
+                                        .createdAt(LocalDateTime.now())
+                                        .createdBy("SYSTEM")
+                                        .build()));
+                    } else {
+                        return Mono.error(new RequestPayoutTransactionInvalidAmountException("PAYOUT_MIN_AMOUNT"));
+                    }
+                })
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Account not found")));
+    }
+
+    @Override
     public Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndPeriod(TransactionType type, LocalDateTime startDate, LocalDateTime endDate, String merchantId) {
         return accountService.getAllAccountsForMerchant(merchantId)
                 .flatMap(account -> transactionRepository.findAllTransactionsForAccountByTypeAndPeriod(type, startDate, endDate, account.getId()))
@@ -126,7 +167,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
 
-    @Transactional
     @Override
     public Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity, String merchantId) {
         if (transactionEntity.getTransactionId() == null) {
@@ -250,7 +290,6 @@ public class TransactionServiceImpl implements TransactionService {
 
     //transactions payout
     @Override
-    @Transactional
     public Mono<TransactionEntity> processPayoutTransaction(TransactionEntity transactionEntity, String merchantId) {
         if (transactionEntity.getTransactionId() == null) {
             return Mono.error(new IllegalArgumentException("Transaction ID cannot be null"));

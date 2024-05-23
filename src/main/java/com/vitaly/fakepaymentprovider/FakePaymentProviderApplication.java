@@ -8,6 +8,9 @@ public class FakePaymentProviderApplication {
     public static void main(String[] args) {
         SpringApplication.run(FakePaymentProviderApplication.class, args);
     }
-    // change account logic to work with account id instead of currency and merchant id
-    // factory for dto?
+    //TODO use dto response instead of map
+    //TODO v dto you can make public static class for embedded dtos
+    //TODO controller otdaet srazu inporgress iz servisa start transaction
+    //TODO scheduled annotation job for webhooks
+    //topup withdraw from customer and not giving money to merchant, and processing - after topup amount on balance - trnasaction is finished
 }

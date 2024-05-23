@@ -2,10 +2,7 @@ package com.vitaly.fakepaymentprovider.rest;
 
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestPayoutTransactionDto;
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestTopupTransactionDto;
-import com.vitaly.fakepaymentprovider.dto.responsedto.ResponsePayoutDetailsDto;
-import com.vitaly.fakepaymentprovider.dto.responsedto.ResponsePayoutsListDto;
-import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTransactionDetailsDto;
-import com.vitaly.fakepaymentprovider.dto.responsedto.ResponseTransactionsListDto;
+import com.vitaly.fakepaymentprovider.dto.responsedto.*;
 import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
@@ -40,29 +37,18 @@ public class PaymentsControllerV1 {
     //topups endpoints
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/topups/")
-    public Mono<ResponseEntity<Map<String, String>>> processTopupTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
-        TransactionEntity newTopupTransaction = transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto).toBuilder()
-                .transactionId(UUID.randomUUID())
-                .transactionType(TransactionType.TOPUP)
-                .status(Status.IN_PROGRESS)
-                .createdAt(LocalDateTime.now())
-                .createdBy("SYSTEM")
-                .build();
-        return Mono.just(newTopupTransaction)
-                .flatMap(topupTransaction -> {
-                    Map<String, String> response = new HashMap<>();
-                    response.put("transaction_id", newTopupTransaction.getTransactionId().toString());
-                    response.put("status", newTopupTransaction.getStatus().toString());
-                    response.put("message", "OK");
-                    return Mono.just(response);
-                })
-                .map(ResponseEntity::ok)
-                .flatMap(initialResponse -> transactionService.processTopupTransaction(newTopupTransaction, authentication.getName())
-                        .map(savedTransaction -> {
-                            initialResponse.getBody().put("transaction_id", savedTransaction.getTransactionId().toString());
-                            initialResponse.getBody().put("status", savedTransaction.getStatus().toString());
-                            return initialResponse;
-                        }));
+    public Mono<ResponseEntity<ResponseInProgressDto>> processTopupTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
+        //TODO validate and go to processing with respond or error in controller
+        //TODO process
+        //TODO finish of transaction should start sending dto
+        return transactionService.validateTopupTransaction(transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto).toBuilder()
+                        .transactionType(TransactionType.TOPUP).build())
+                .map(validatedTransaction -> ResponseInProgressDto.builder()
+                        .transactionId(validatedTransaction.getTransactionId())
+                        .status(validatedTransaction.getStatus())
+                        .message("OK")
+                        .build())
+                .map(ResponseEntity::ok);
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -116,56 +102,15 @@ public class PaymentsControllerV1 {
     //payout endpoints
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/payout/")
-    public Mono<ResponseEntity<Map<String, String>>> processPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto, Authentication authentication) {
-        TransactionEntity newPayoutTransaction = transactionMapper.mapFromRequestPayoutDto(payoutDto).toBuilder()
-                .transactionId(UUID.randomUUID())
-                .transactionType(TransactionType.PAYOUT)
-                .status(Status.IN_PROGRESS)
-                .createdAt(LocalDateTime.now())
-                .createdBy("SYSTEM")
-                .build();
-
-        return Mono.just(newPayoutTransaction)
-                .flatMap(payoutTransaction -> {
-                    Map<String, String> response = new HashMap<>();
-                    response.put("transaction_id", payoutTransaction.getTransactionId().toString());
-                    response.put("status", payoutTransaction.getStatus().toString());
-                    response.put("message", "Payout is successfully completed");
-                    return Mono.just(response);
-                })
-                .map(ResponseEntity::ok)
-                .flatMap(initialResponse -> transactionService.processPayoutTransaction(newPayoutTransaction, authentication.getName())
-                        .map(savedTransaction -> {
-                            initialResponse.getBody().put("transaction_id", savedTransaction.getTransactionId().toString());
-                            initialResponse.getBody().put("status", savedTransaction.getStatus().toString());
-                            return initialResponse;
-                        }));
-    }
-
-
-
-    @PreAuthorize("isAuthenticated()")
-    @PostMapping("/testpayout/")
-    public Mono<ResponseEntity<Map<String, String>>> teastPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto, Authentication authentication) {
-        TransactionEntity newPayoutTransaction = transactionMapper.mapFromRequestPayoutDto(payoutDto).toBuilder()
-                .transactionId(UUID.randomUUID())
-                .status(Status.IN_PROGRESS)
-                .build();
-        return Mono.just(newPayoutTransaction)
-                .flatMap(payoutTransaction -> {
-                    Map<String, String> response = new HashMap<>();
-                    response.put("transaction_id", payoutTransaction.getTransactionId().toString());
-                    response.put("status", payoutTransaction.getStatus().toString());
-                    response.put("message", "Payout is successfully completed");
-                    return Mono.just(response);
-                })
-                .map(ResponseEntity::ok)
-                .flatMap(initialResponse -> transactionService.processPayoutTransaction(newPayoutTransaction, authentication.getName())
-                        .map(savedTransaction -> {
-                            initialResponse.getBody().put("transaction_id", savedTransaction.getTransactionId().toString());
-                            initialResponse.getBody().put("status", savedTransaction.getStatus().toString());
-                            return initialResponse;
-                        }));
+    public Mono<ResponseEntity<ResponseInProgressDto>> processPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto, Authentication authentication) {
+        return transactionService.validatePayoutTransaction(transactionMapper.mapFromRequestPayoutDto(payoutDto).toBuilder()
+                        .transactionType(TransactionType.PAYOUT).build(), authentication.getName())
+                .map(validatedTransaction -> ResponseInProgressDto.builder()
+                        .transactionId(validatedTransaction.getTransactionId())
+                        .status(Status.SUCCESS)
+                        .message("Payout is successfully completed")
+                        .build())
+                .map(ResponseEntity::ok);
     }
 
     @PreAuthorize("isAuthenticated()")
