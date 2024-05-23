@@ -3,10 +3,16 @@ package com.vitaly.fakepaymentprovider.rest;
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestPayoutTransactionDto;
 import com.vitaly.fakepaymentprovider.dto.requestdto.RequestTopupTransactionDto;
 import com.vitaly.fakepaymentprovider.dto.responsedto.*;
+import com.vitaly.fakepaymentprovider.entity.AccountEntity;
+import com.vitaly.fakepaymentprovider.entity.CardEntity;
+import com.vitaly.fakepaymentprovider.entity.CustomerEntity;
 import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import com.vitaly.fakepaymentprovider.mapper.TransactionMapper;
+import com.vitaly.fakepaymentprovider.service.AccountService;
+import com.vitaly.fakepaymentprovider.service.CardService;
+import com.vitaly.fakepaymentprovider.service.CustomerService;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +39,9 @@ import java.util.stream.Collectors;
 public class PaymentsControllerV1 {
     private final TransactionService transactionService;
     private final TransactionMapper transactionMapper;
+    private final CardService cardService;
+    private final CustomerService customerService;
+    private final AccountService accountService;
 
     //topups endpoints
     @PreAuthorize("isAuthenticated()")
@@ -41,8 +50,35 @@ public class PaymentsControllerV1 {
         //TODO validate and go to processing with respond or error in controller
         //TODO process
         //TODO finish of transaction should start sending dto
-        return transactionService.validateTopupTransaction(transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto).toBuilder()
+        Mono<TransactionEntity> transactionMono = transactionService.validateTopupTransaction(transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto).toBuilder()
                         .transactionType(TransactionType.TOPUP).build())
+                .doOnSuccess(validatedTransaction ->{
+                    Mono<CardEntity> saveCardData = cardService.saveCardInTransaction(validatedTransaction.getCardData());
+                    Mono<CustomerEntity> saveCustomerData = customerService.saveCustomerInTransaction(CustomerEntity.builder()
+                                    .firstName(validatedTransaction.getCustomer().getFirstName())
+                                    .lastName(validatedTransaction.getCustomer().getLastName())
+                                    .country(validatedTransaction.getCustomer().getCountry())
+                                    .cardNumber(validatedTransaction.getCardData().getCardNumber())
+                            .build());
+                    Mono<AccountEntity> saveAccountData = accountService.saveAccountInTransaction(AccountEntity.builder()
+                                    .merchantId(authentication.getName())
+                                    .currency(validatedTransaction.getCurrency())
+                                    .amount(validatedTransaction.getAmount())
+                                    .build());
+                Mono.zip(saveCardData, saveCustomerData, saveAccountData)
+                        .flatMap(tuple -> {
+                            CardEntity savedCard = tuple.getT1();
+                            CustomerEntity savedCustomer = tuple.getT2();
+                            AccountEntity savedAccount = tuple.getT3();
+
+                            validatedTransaction.setCardNumber(savedCard.getCardNumber());
+                            validatedTransaction.setCustomer(savedCustomer);
+                            validatedTransaction.setAccountId(savedAccount.getId());
+                            return transactionService.save(validatedTransaction);
+                        });
+                });
+
+        return transactionMono
                 .map(validatedTransaction -> ResponseInProgressDto.builder()
                         .transactionId(validatedTransaction.getTransactionId())
                         .status(validatedTransaction.getStatus())

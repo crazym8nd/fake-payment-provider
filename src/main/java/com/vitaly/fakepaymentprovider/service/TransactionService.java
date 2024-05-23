@@ -16,12 +16,14 @@ public interface TransactionService extends GenericService<TransactionEntity, UU
     Mono<TransactionEntity> validatePayoutTransaction(TransactionEntity transactionEntity, String merchantId);
 
     Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndPeriod(TransactionType type, LocalDateTime startDate, LocalDateTime endDate, String merchantId);
+    Flux<TransactionEntity> getAllTopupTransactionsInProgress();
+    Flux<TransactionEntity> getAllPayoutTransactionsInProgress();
 
     Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndDay(TransactionType type, LocalDate date, String merchantId);
 
     Mono<TransactionEntity> getByIdWithDetails(UUID transactionId);
-
+    Mono<Void> processTopTransactionsInProgress(Flux<TransactionEntity> transactions);
     Mono<TransactionEntity> processPayoutTransaction(TransactionEntity transactionEntity, String merchantId);
 
-    Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity, String merchantId);
+    Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity);
 }

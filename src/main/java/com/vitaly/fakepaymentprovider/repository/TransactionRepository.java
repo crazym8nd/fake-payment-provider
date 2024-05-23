@@ -20,4 +20,7 @@ public interface TransactionRepository extends R2dbcRepository<TransactionEntity
     @Query("SELECT * FROM transactions WHERE transactions.account_id = :id AND transaction_type = :type AND DATE (created_at) = :date")
     Flux<TransactionEntity> findAllTransactionsForAccountByTypeAndDay(TransactionType type, LocalDate date, Long id);
 
+    Flux<TransactionEntity> findAllByTransactionTypeTopupAndStatusInProgress();
+    Flux<TransactionEntity> findAllByTransactionTypePayoutAndStatusInProgress();
+
 }
