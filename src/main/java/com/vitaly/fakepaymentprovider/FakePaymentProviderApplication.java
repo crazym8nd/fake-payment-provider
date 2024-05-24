@@ -15,5 +15,6 @@ public class FakePaymentProviderApplication {
     //TODO controller otdaet srazu inporgress iz servisa start transaction
     //TODO scheduled annotation job for webhooks
     //TODO transaction should save account id
+    //TODO conrtoller saving data for transaction and processing transaction moving balance for ntransaction to account balance of merchant 
     //topup withdraw from customer and not giving money to merchant, and processing - after topup amount on balance - trnasaction is finished
 }

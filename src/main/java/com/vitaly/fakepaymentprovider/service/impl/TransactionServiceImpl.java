@@ -1,9 +1,10 @@
 package com.vitaly.fakepaymentprovider.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vitaly.fakepaymentprovider.dto.webhook.WebhookDto;
-import com.vitaly.fakepaymentprovider.entity.*;
+import com.vitaly.fakepaymentprovider.entity.AccountEntity;
+import com.vitaly.fakepaymentprovider.entity.CardEntity;
+import com.vitaly.fakepaymentprovider.entity.CustomerEntity;
+import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import com.vitaly.fakepaymentprovider.exceptionhandling.RequestPayoutTransactionInvalidAmountException;
@@ -20,7 +21,6 @@ import com.vitaly.fakepaymentprovider.webhook.WebhookNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -155,119 +155,32 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Mono<TransactionEntity> save(TransactionEntity transactionEntity) {
+        log.warn("Saving transaction {}", transactionEntity);
         return transactionRepository.save(transactionEntity);
     }
 
 
     @Override
     public Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity) {
-        if (transactionEntity.getTransactionId() == null) {
-            return Mono.error(new IllegalArgumentException("Transaction ID cannot be null"));
-        }
+            Mono<CardEntity> cardFromTransaction= cardService.getById(transactionEntity.getCardNumber());
+            Mono<CustomerEntity> customerFromTransaction = customerService.getById(transactionEntity.getCardNumber());
+            Mono<AccountEntity> accountFromTransaction = accountService.getById(transactionEntity.getAccountId());
 
-        transactionEntity.setCardNumber(transactionEntity.getCardData().getCardNumber());
-        CustomerEntity customerEntity = CustomerEntity.builder()
-                .firstName(transactionEntity.getCustomer().getFirstName())
-                .lastName(transactionEntity.getCustomer().getLastName())
-                .country(transactionEntity.getCustomer().getCountry())
-                .cardNumber(transactionEntity.getCardNumber())
-                .build();
-
-
-        log.warn("Saving transaction {}", transactionEntity);
-        log.warn("For merchant {}", merchantId);
-
-        if (!transactionEntity.getPaymentMethod().equals("CARD")) {
-            return Mono.error(new RequestTopUpTransactionInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
-        } else {
-            Mono<CardEntity> saveCardData = cardService.saveCardInTransaction(transactionEntity.getCardData());
-            Mono<CustomerEntity> saveCustomerData = customerService.saveCustomerInTransaction(customerEntity);
-            Mono<AccountEntity> saveAccountData = saveAccountData(transactionEntity, merchantId);
-
-            log.warn("Saving topup transaction: {}", transactionEntity);
-            return Mono.zip(saveCardData, saveCustomerData, saveAccountData)
+            return Mono.zip(cardFromTransaction, customerFromTransaction, accountFromTransaction)
                     .flatMap(tuple -> {
-                        CardEntity cardEntity = tuple.getT1();
-                        CustomerEntity savedCustomer = tuple.getT2();
-                        AccountEntity accountEntity = tuple.getT3();
+                        transactionEntity.setCardData(tuple.getT1());
+                        transactionEntity.setCustomer(tuple.getT2());
+                        transactionEntity.setAccountId(tuple.getT3().getId());
 
-                        transactionEntity.setCardNumber(cardEntity.getCardNumber());
-                        transactionEntity.setCustomer(savedCustomer);
-                        transactionEntity.setAccountId(accountEntity.getId());
-                        return transactionRepository.save(transactionEntity);
-                    })
-                    .flatMap(savedTransaction -> {
-                        try {
-                            String dtoJson = objectMapper.writeValueAsString(WebhookDto.builder()
-                                    .transactionId(transactionEntity.getTransactionId())
-                                    .paymentMethod(transactionEntity.getPaymentMethod())
-                                    .amount(transactionEntity.getAmount())
-                                    .currency(transactionEntity.getCurrency())
-                                    .type(transactionEntity.getTransactionType().toString())
-                                    .language(transactionEntity.getLanguage())
-                                    .cardData(cardMapper.mapToWebhookCardDataDto(transactionEntity.getCardData()))
-                                    .customer(customerMapper.mapToWebhookCustomerDto(transactionEntity.getCustomer()))
-                                    .createdAt(transactionEntity.getCreatedAt())
-                                    .status(transactionEntity.getStatus())
-                                    .message("OK")
-                                    .build());
-
-                            WebhookEntity webhookEntity = WebhookEntity.builder()
-                                    .transactionId(savedTransaction.getTransactionId())
-                                    .urlRequest(transactionEntity.getNotificationUrl())
-                                    .transactionAttempt(0L)
-                                    .bodyRequest(dtoJson)
-                                    .createdAt(transactionEntity.getCreatedAt())
-                                    .createdBy("SYSTEM")
-                                    .status(transactionEntity.getStatus())
-                                    .build();
-
-                            log.warn("Saving webhook {}", webhookEntity);
-
-                            return webhookNotificationService.saveWebhook(webhookEntity)
-                                    .flatMap(webhookNotificationService::sendWebhook)
-                                    .thenReturn(savedTransaction
-                                    );
-
-                        } catch (JsonProcessingException e) {
-                            return Mono.error(new RuntimeException("Error processing JSON", e));
-                        }
+                        return Mono.just(transactionEntity);
                     })
                     .flatMap(savedTransaction -> {
                         savedTransaction.setStatus(Status.SUCCESS);
                         return update(savedTransaction);
                     })
                     .flatMap(updatedTransaction -> webhookRepository.findByTransactionId(updatedTransaction.getTransactionId())
-                            .flatMap(webhookEntity -> {
-                                try {
-                                    String dtoJson = objectMapper.writeValueAsString(WebhookDto.builder()
-                                            .transactionId(updatedTransaction.getTransactionId())
-                                            .paymentMethod(updatedTransaction.getPaymentMethod())
-                                            .amount(updatedTransaction.getAmount())
-                                            .currency(updatedTransaction.getCurrency())
-                                            .type(updatedTransaction.getTransactionType().toString())
-                                            .language(updatedTransaction.getLanguage())
-                                            .cardData(cardMapper.mapToWebhookCardDataDto(updatedTransaction.getCardData()))
-                                            .customer(customerMapper.mapToWebhookCustomerDto(updatedTransaction.getCustomer()))
-                                            .createdAt(updatedTransaction.getCreatedAt())
-                                            .status(updatedTransaction.getStatus())
-                                            .message("OK")
-                                            .build());
-                                    webhookEntity.setBodyRequest(dtoJson);
-                                    webhookEntity.setStatus(updatedTransaction.getStatus());
-                                    webhookEntity.setUpdatedAt(LocalDateTime.now());
-                                    webhookEntity.setUpdatedBy("SYSTEM");
-                                    log.warn("Saving webhook {}", webhookEntity);
-                                    return webhookNotificationService.saveWebhook(webhookEntity)
-                                            .flatMap(webhookNotificationService::sendWebhook)
-                                            .thenReturn(updatedTransaction);
-                                } catch (JsonProcessingException e) {
-                                    return Mono.error(new RuntimeException("Error processing JSON", e));
-                                }
-                            }))
                     .doOnSuccess(updatedTransaction -> log.warn("Transaction saved successfully: {}", updatedTransaction))
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
-        }
     }
 
     private Mono<AccountEntity> saveAccountData(TransactionEntity transactionEntity, String merchantId) {
