@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -188,7 +187,6 @@ public class TransactionServiceImpl implements TransactionService {
         return accountService.getByMerchantIdAndCurrency(merchantId, transactionEntity.getCurrency())
                 .flatMap(account -> {
                     if (account.getAmount().compareTo(transactionEntity.getAmount()) >= 0) {
-
                         return Mono.just(transactionEntity.toBuilder()
                                 .transactionId(UUID.randomUUID())
                                 .status(Status.IN_PROGRESS)

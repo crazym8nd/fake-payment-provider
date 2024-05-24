@@ -1,16 +1,16 @@
 package com.vitaly.fakepaymentprovider.webhook;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.vitaly.fakepaymentprovider.dto.webhook.WebhookDto;
+import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.entity.WebhookEntity;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
 public interface WebhookNotificationService {
-    Mono<WebhookEntity> saveWebhook(WebhookEntity webhookEntity);
-    Mono<WebhookEntity> updateWebhook(WebhookEntity webhookEntity);
+    Mono<WebhookEntity> validateWebhook(WebhookEntity webhookEntity);
+    Mono<TransactionEntity> createWebhook(Mono<TransactionEntity> transactionEntityMono);
     Mono<WebhookEntity> sendWebhook(WebhookEntity webhookEntity);
+    Mono<WebhookEntity> updateWebhook(WebhookEntity webhookEntity);
     Mono<WebhookEntity> getByTransactionId(UUID transactionId);
 
 

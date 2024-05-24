@@ -6,7 +6,6 @@ import com.vitaly.fakepaymentprovider.dto.responsedto.*;
 import com.vitaly.fakepaymentprovider.entity.AccountEntity;
 import com.vitaly.fakepaymentprovider.entity.CardEntity;
 import com.vitaly.fakepaymentprovider.entity.CustomerEntity;
-import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import com.vitaly.fakepaymentprovider.mapper.TransactionMapper;
@@ -173,15 +172,6 @@ public class PaymentsControllerV1 {
                            })
                            .thenReturn(response);
                });
-
-//        return transactionService.validatePayoutTransaction(transactionMapper.mapFromRequestPayoutDto(payoutDto).toBuilder()
-//                        .transactionType(TransactionType.PAYOUT).build(), authentication.getName())
-//                .map(validatedTransaction -> ResponseInProgressDto.builder()
-//                        .transactionId(validatedTransaction.getTransactionId())
-//                        .status(Status.SUCCESS)
-//                        .message("Payout is successfully completed")
-//                        .build())
-//                .map(ResponseEntity::ok);
     }
 
     @PreAuthorize("isAuthenticated()")

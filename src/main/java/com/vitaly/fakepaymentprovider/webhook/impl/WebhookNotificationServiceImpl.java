@@ -69,7 +69,7 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
         return webhookRepository.findByTransactionId(transactionId);
     }
 
-    private Mono<WebhookEntity> validateWebhook(WebhookEntity webhookEntity) {
+    public Mono<WebhookEntity> validateWebhook(WebhookEntity webhookEntity) {
         log.warn("Validating webhook {}", webhookEntity);
         if (webhookEntity.getTransactionId()== null) {
             return Mono.error(new InvalidWebhookDataException("Webhook ID cannot be null"));
