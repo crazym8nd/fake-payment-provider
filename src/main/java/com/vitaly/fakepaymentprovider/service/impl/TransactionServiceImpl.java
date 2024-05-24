@@ -21,6 +21,7 @@ import com.vitaly.fakepaymentprovider.webhook.WebhookNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -85,15 +86,12 @@ public class TransactionServiceImpl implements TransactionService {
                 );
     }
 
-    @Override
-    public Flux<TransactionEntity> getAllTopupTransactionsInProgress() {
-        return transactionRepository.findAllByTransactionTypeTopupAndStatusInProgress();
-    }
 
     @Override
-    public Flux<TransactionEntity> getAllPayoutTransactionsInProgress() {
-        return transactionRepository.findAllByTransactionTypePayoutAndStatusInProgress();
+    public Flux<TransactionEntity> getAllTransactionsByTypeAndStatus(TransactionType transactionType, Status status) {
+        return transactionRepository.findAllByTransactionTypeAndStatus(transactionType, status);
     }
+
 
     @Override
     public Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndDay(TransactionType type, LocalDate date, String merchantId) {
@@ -142,7 +140,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Mono<Void> processTopTransactionsInProgress(Flux<TransactionEntity> transactions) {
-        return transactions.flatMapSequential(this::processTopupTransaction
+        return transactions.flatMapSequential(this::processTransaction
         ).then();
     }
 
@@ -161,7 +159,8 @@ public class TransactionServiceImpl implements TransactionService {
 
 
     @Override
-    public Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity) {
+    @Transactional
+    public Mono<TransactionEntity> processTransaction(TransactionEntity transactionEntity) {
             Mono<CardEntity> cardFromTransaction= cardService.getById(transactionEntity.getCardNumber());
             Mono<CustomerEntity> customerFromTransaction = customerService.getById(transactionEntity.getCardNumber());
             Mono<AccountEntity> accountFromTransaction = accountService.getById(transactionEntity.getAccountId());
@@ -172,125 +171,34 @@ public class TransactionServiceImpl implements TransactionService {
                         transactionEntity.setCustomer(tuple.getT2());
                         transactionEntity.setAccountId(tuple.getT3().getId());
 
-                        return Mono.just(transactionEntity);
+                        return accountService.processTransaction(transactionEntity.getTransactionType(),
+                                        transactionEntity.getAccountId(), transactionEntity.getAmount())
+                                .then(save(transactionEntity.toBuilder()
+                                        .status(Status.SUCCESS)
+                                        .updatedBy("SYSTEM")
+                                        .updatedAt(LocalDateTime.now())
+                                        .build()));
                     })
-                    .flatMap(savedTransaction -> {
-                        savedTransaction.setStatus(Status.SUCCESS);
-                        return update(savedTransaction);
-                    })
-                    .flatMap(updatedTransaction -> webhookRepository.findByTransactionId(updatedTransaction.getTransactionId())
-                    .doOnSuccess(updatedTransaction -> log.warn("Transaction saved successfully: {}", updatedTransaction))
+                    .doOnSuccess(processedTransaction -> log.warn("Transaction processed successfully: {}", processedTransaction.getTransactionId()))
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
     }
-
-    private Mono<AccountEntity> saveAccountData(TransactionEntity transactionEntity, String merchantId) {
-        return accountService.saveAccountInTransaction(
-                AccountEntity.builder()
-                        .merchantId(merchantId)
-                        .currency(transactionEntity.getCurrency())
-                        .amount(transactionEntity.getAmount())
-                        .build());
-    }
-
-
     //transactions payout
     @Override
     public Mono<TransactionEntity> validatePayoutTransaction(TransactionEntity transactionEntity,String merchantId) {
         return accountService.getByMerchantIdAndCurrency(merchantId, transactionEntity.getCurrency())
                 .flatMap(account -> {
-                    BigDecimal initialBalance = account.getAmount();
-                    if (initialBalance.compareTo(transactionEntity.getAmount()) >= 0) {
-                        BigDecimal changedBalance = initialBalance.subtract(transactionEntity.getAmount());
-                        return accountService.update(
-                                        account.toBuilder()
-                                                .amount(changedBalance)
-                                                .updatedAt(LocalDateTime.now())
-                                                .updatedBy("SYSTEM")
-                                                .build())
-                                .flatMap(savedAccount -> Mono.just(transactionEntity.toBuilder()
-                                        .transactionId(UUID.randomUUID())
-                                        .status(Status.IN_PROGRESS)
-                                        .createdAt(LocalDateTime.now())
-                                        .createdBy("SYSTEM")
-                                        .build()));
+                    if (account.getAmount().compareTo(transactionEntity.getAmount()) >= 0) {
+
+                        return Mono.just(transactionEntity.toBuilder()
+                                .transactionId(UUID.randomUUID())
+                                .status(Status.IN_PROGRESS)
+                                .createdAt(LocalDateTime.now())
+                                .createdBy("SYSTEM")
+                                .build());
                     } else {
                         return Mono.error(new RequestPayoutTransactionInvalidAmountException("PAYOUT_MIN_AMOUNT"));
                     }
                 })
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Account not found")));
-    }
-
-    @Override
-    public Mono<TransactionEntity> processPayoutTransaction(TransactionEntity transactionEntity, String merchantId) {
-        if (transactionEntity.getTransactionId() == null) {
-            return Mono.error(new IllegalArgumentException("Transaction ID cannot be null"));
-        }
-
-        transactionEntity.setCardNumber(transactionEntity.getCardData().getCardNumber());
-        CustomerEntity customerEntity = CustomerEntity.builder()
-                .firstName(transactionEntity.getCustomer().getFirstName())
-                .lastName(transactionEntity.getCustomer().getLastName())
-                .country(transactionEntity.getCustomer().getCountry())
-                .cardNumber(transactionEntity.getCardNumber())
-                .build();
-        log.warn("Payout transaction: {}", transactionEntity);
-        log.warn("For merchant: {}", merchantId);
-
-        if (!transactionEntity.getPaymentMethod().equals("CARD")) {
-            return Mono.error(new RequestTopUpTransactionInvalidPaymentMethodException("Invalid payment method: " + transactionEntity.getPaymentMethod()));
-        } else {
-            Mono<CardEntity> saveCardData = cardService.saveCardInTransaction(transactionEntity.getCardData());
-            Mono<AccountEntity> accountMono = accountService.getByMerchantIdAndCurrency(merchantId, transactionEntity.getCurrency());
-            Mono<CustomerEntity> saveCustomerData = customerService.saveCustomerInTransaction(customerEntity);
-
-            log.warn("Saving payout transaction: {}", transactionEntity);
-            return Mono.zip(saveCardData, saveCustomerData, accountMono)
-                    .flatMap(tuple -> {
-                        CardEntity cardEntity = tuple.getT1();
-                        CustomerEntity savedCustomer = tuple.getT2();
-                        AccountEntity accountEntity = tuple.getT3();
-
-                        transactionEntity.setCardNumber(cardEntity.getCardNumber());
-                        transactionEntity.setCustomer(savedCustomer);
-                        transactionEntity.setAccountId(accountEntity.getId());
-
-
-                        return save(transactionEntity.toBuilder()
-                                .transactionType(TransactionType.PAYOUT)
-                                .paymentMethod(transactionEntity.getPaymentMethod())
-                                .amount(transactionEntity.getAmount())
-                                .currency(transactionEntity.getCurrency())
-                                .language(transactionEntity.getLanguage())
-                                .notificationUrl(transactionEntity.getNotificationUrl())
-                                .createdBy("SYSTEM")
-                                .status(Status.IN_PROGRESS)
-                                .updatedAt(LocalDateTime.now())
-                                .build())
-                                .flatMap(savedTransaction -> {
-                                    BigDecimal accountAmount = accountEntity.getAmount();
-                                    if (accountAmount != null && accountAmount.compareTo(transactionEntity.getAmount()) >= 0) {
-                                        BigDecimal newAccountAmount = accountAmount.subtract(transactionEntity.getAmount());
-                                        return accountService.update(
-                                                        accountEntity.toBuilder()
-                                                                .amount(newAccountAmount)
-                                                                .updatedAt(LocalDateTime.now())
-                                                                .build())
-                                                .then(transactionRepository.save(transactionEntity.toBuilder()
-                                                        .transactionType(TransactionType.PAYOUT)
-                                                        .paymentMethod(transactionEntity.getPaymentMethod())
-                                                        .amount(transactionEntity.getAmount())
-                                                        .currency(transactionEntity.getCurrency())
-                                                        .language(transactionEntity.getLanguage())
-                                                        .notificationUrl(transactionEntity.getNotificationUrl())
-                                                        .createdBy("SYSTEM")
-                                                        .status(Status.SUCCESS)
-                                                        .updatedAt(LocalDateTime.now())
-                                                        .build()));
-                                    } else {
-                                        return Mono.error(new RequestPayoutTransactionInvalidAmountException("PAYOUT_MIN_AMOUNT"));
-                                    }
-                                });
-                    });
-        }
     }
 }

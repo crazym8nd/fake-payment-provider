@@ -3,6 +3,7 @@ package com.vitaly.fakepaymentprovider.service.impl;
 import com.vitaly.fakepaymentprovider.entity.AccountEntity;
 import com.vitaly.fakepaymentprovider.entity.util.Currency;
 import com.vitaly.fakepaymentprovider.entity.util.Status;
+import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import com.vitaly.fakepaymentprovider.repository.AccountRepository;
 import com.vitaly.fakepaymentprovider.service.AccountService;
 import lombok.RequiredArgsConstructor;
@@ -37,23 +38,41 @@ public class AccountServiceImpl implements AccountService {
         return accountRepository.save(accountEntity);
     }
 
-    public Mono<AccountEntity> saveAccountInTransaction(AccountEntity accountEntity) {
-        return accountRepository.findByMerchantIdAndCurrency(accountEntity.getMerchantId(), accountEntity.getCurrency())
+
+
+    @Override
+    public Mono<AccountEntity> saveAccountForTransaction(AccountEntity accountEntity) {
+        return getByMerchantIdAndCurrency(accountEntity.getMerchantId(), accountEntity.getCurrency())
+                        .switchIfEmpty(accountRepository.save(
+                                    accountEntity.toBuilder()
+                                      .merchantId(accountEntity.getMerchantId())
+                                      .currency(accountEntity.getCurrency())
+                                       .amount(BigDecimal.ZERO)
+                                        .createdBy("SYSTEM")
+                                        .createdAt(LocalDateTime.now())
+                                       .status(Status.ACTIVE)
+                                    .build()));
+    }
+
+    @Override
+    public Mono<AccountEntity> processTransaction(TransactionType type, Long accountId, BigDecimal amount) {
+        return accountRepository.findById(accountId)
                 .flatMap(existingAccount -> {
-                    BigDecimal newAmount = existingAccount.getAmount().add(accountEntity.getAmount());
-                    existingAccount.setAmount(newAmount);
+                    switch (type) {
+                        case TOPUP:
+                            existingAccount.setAmount(existingAccount.getAmount().add(amount));
+                            break;
+                        case PAYOUT:
+                            existingAccount.setAmount(existingAccount.getAmount().subtract(amount));
+                            break;
+                        default:
+                            return Mono.error(new IllegalArgumentException("Invalid transaction type: " + type));
+                    }
                     existingAccount.setUpdatedAt(LocalDateTime.now());
+                    existingAccount.setUpdatedBy("SYSTEM");
+
                     return accountRepository.save(existingAccount);
-                })
-                .switchIfEmpty(Mono.defer(() -> accountRepository.save(
-                        accountEntity.toBuilder()
-                                .merchantId(accountEntity.getMerchantId())
-                                .currency(accountEntity.getCurrency())
-                                .amount(accountEntity.getAmount())
-                                .createdBy("SYSTEM")
-                                .updatedBy("SYSTEM")
-                                .status(Status.ACTIVE)
-                                .build())));
+                });
     }
 
 

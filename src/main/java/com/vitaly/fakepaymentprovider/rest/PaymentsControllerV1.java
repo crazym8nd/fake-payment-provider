@@ -45,44 +45,43 @@ public class PaymentsControllerV1 {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/topups/")
     public Mono<ResponseEntity<ResponseInProgressDto>> processTopupTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
-        //TODO validate and go to processing with respond or error in controller
-        //TODO process
-        //TODO finish of transaction should start sending dto
-        Mono<TransactionEntity> transactionMono = transactionService.validateTopupTransaction(transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto).toBuilder()
+        return transactionService.validateTopupTransaction(transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto).toBuilder()
                         .transactionType(TransactionType.TOPUP).build())
-                .doOnSuccess(validatedTransaction ->{
-                    Mono<CardEntity> saveCardData = cardService.saveCardInTransaction(validatedTransaction.getCardData());
-                    Mono<CustomerEntity> saveCustomerData = customerService.saveCustomerInTransaction(CustomerEntity.builder()
-                                    .firstName(validatedTransaction.getCustomer().getFirstName())
-                                    .lastName(validatedTransaction.getCustomer().getLastName())
-                                    .country(validatedTransaction.getCustomer().getCountry())
-                                    .cardNumber(validatedTransaction.getCardData().getCardNumber())
-                            .build());
-                    Mono<AccountEntity> saveAccountData = accountService.saveAccountInTransaction(AccountEntity.builder()
-                                    .merchantId(authentication.getName())
-                                    .currency(validatedTransaction.getCurrency())
-                                    .amount(validatedTransaction.getAmount())
+                .flatMap(validatedTransaction -> {
+                    ResponseEntity<ResponseInProgressDto> response = ResponseEntity.ok(
+                            ResponseInProgressDto.builder()
+                                    .transactionId(validatedTransaction.getTransactionId())
+                                    .status(validatedTransaction.getStatus())
+                                    .message("OK")
                                     .build());
-                Mono.zip(saveCardData, saveCustomerData, saveAccountData)
-                        .flatMap(tuple -> {
-                            CardEntity savedCard = tuple.getT1();
-                            CustomerEntity savedCustomer = tuple.getT2();
-                            AccountEntity savedAccount = tuple.getT3();
 
-                            validatedTransaction.setCardNumber(savedCard.getCardNumber());
-                            validatedTransaction.setCustomer(savedCustomer);
-                            validatedTransaction.setAccountId(savedAccount.getId());
-                            return transactionService.save(validatedTransaction);
-                        });
+                    Mono<CardEntity> saveCardData = cardService.saveCardForTransaction(validatedTransaction.getCardData());
+                    Mono<CustomerEntity> saveCustomerData = customerService.saveCustomerForTransaction(CustomerEntity.builder()
+                            .firstName(validatedTransaction.getCustomer().getFirstName())
+                            .lastName(validatedTransaction.getCustomer().getLastName())
+                            .country(validatedTransaction.getCustomer().getCountry())
+                            .cardNumber(validatedTransaction.getCardData().getCardNumber())
+                            .build());
+                    Mono<AccountEntity> saveAccountData = accountService.saveAccountForTransaction(AccountEntity.builder()
+                            .merchantId(authentication.getName())
+                            .currency(validatedTransaction.getCurrency())
+                            .amount(validatedTransaction.getAmount())
+                            .build());
+
+                    return Mono.when(saveCardData, saveCustomerData, saveAccountData)
+                            .then(Mono.zip(saveCardData, saveCustomerData, saveAccountData))
+                            .flatMap(tuple -> {
+                                CardEntity savedCard = tuple.getT1();
+                                CustomerEntity savedCustomer = tuple.getT2();
+                                AccountEntity savedAccount = tuple.getT3();
+
+                                validatedTransaction.setCardNumber(savedCard.getCardNumber());
+                                validatedTransaction.setCustomer(savedCustomer);
+                                validatedTransaction.setAccountId(savedAccount.getId());
+                                return transactionService.save(validatedTransaction);
+                            })
+                            .thenReturn(response);
                 });
-
-        return transactionMono
-                .map(validatedTransaction -> ResponseInProgressDto.builder()
-                        .transactionId(validatedTransaction.getTransactionId())
-                        .status(validatedTransaction.getStatus())
-                        .message("OK")
-                        .build())
-                .map(ResponseEntity::ok);
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -137,14 +136,52 @@ public class PaymentsControllerV1 {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/payout/")
     public Mono<ResponseEntity<ResponseInProgressDto>> processPayoutTransaction(@RequestBody RequestPayoutTransactionDto payoutDto, Authentication authentication) {
-        return transactionService.validatePayoutTransaction(transactionMapper.mapFromRequestPayoutDto(payoutDto).toBuilder()
-                        .transactionType(TransactionType.PAYOUT).build(), authentication.getName())
-                .map(validatedTransaction -> ResponseInProgressDto.builder()
-                        .transactionId(validatedTransaction.getTransactionId())
-                        .status(Status.SUCCESS)
-                        .message("Payout is successfully completed")
-                        .build())
-                .map(ResponseEntity::ok);
+       return transactionService.validatePayoutTransaction(transactionMapper.mapFromRequestPayoutDto(payoutDto).toBuilder()
+               .transactionType(TransactionType.PAYOUT).build(), authentication.getName())
+               .flatMap(validatedTransaction -> {
+                   ResponseEntity<ResponseInProgressDto> response = ResponseEntity.ok(
+                           ResponseInProgressDto.builder()
+                                   .transactionId(validatedTransaction.getTransactionId())
+                                   .status(Status.SUCCESS)
+                                   .message("Payout is successfully completed")
+                                   .build());
+
+                   Mono<CardEntity> saveCardData = cardService.saveCardForTransaction(validatedTransaction.getCardData());
+                   Mono<CustomerEntity> saveCustomerData = customerService.saveCustomerForTransaction(CustomerEntity.builder()
+                           .firstName(validatedTransaction.getCustomer().getFirstName())
+                           .lastName(validatedTransaction.getCustomer().getLastName())
+                           .country(validatedTransaction.getCustomer().getCountry())
+                           .cardNumber(validatedTransaction.getCardData().getCardNumber())
+                           .build());
+                   Mono<AccountEntity> saveAccountData = accountService.saveAccountForTransaction(AccountEntity.builder()
+                           .merchantId(authentication.getName())
+                           .currency(validatedTransaction.getCurrency())
+                           .amount(validatedTransaction.getAmount())
+                           .build());
+
+                   return Mono.when(saveCardData, saveCustomerData, saveAccountData)
+                           .then(Mono.zip(saveCardData, saveCustomerData, saveAccountData))
+                           .flatMap(tuple -> {
+                               CardEntity savedCard = tuple.getT1();
+                               CustomerEntity savedCustomer = tuple.getT2();
+                               AccountEntity savedAccount = tuple.getT3();
+
+                               validatedTransaction.setCardNumber(savedCard.getCardNumber());
+                               validatedTransaction.setCustomer(savedCustomer);
+                               validatedTransaction.setAccountId(savedAccount.getId());
+                               return transactionService.save(validatedTransaction);
+                           })
+                           .thenReturn(response);
+               });
+
+//        return transactionService.validatePayoutTransaction(transactionMapper.mapFromRequestPayoutDto(payoutDto).toBuilder()
+//                        .transactionType(TransactionType.PAYOUT).build(), authentication.getName())
+//                .map(validatedTransaction -> ResponseInProgressDto.builder()
+//                        .transactionId(validatedTransaction.getTransactionId())
+//                        .status(Status.SUCCESS)
+//                        .message("Payout is successfully completed")
+//                        .build())
+//                .map(ResponseEntity::ok);
     }
 
     @PreAuthorize("isAuthenticated()")

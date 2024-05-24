@@ -1,5 +1,7 @@
 package com.vitaly.fakepaymentprovider.service.impl;
 
+import com.vitaly.fakepaymentprovider.entity.util.Status;
+import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import com.vitaly.fakepaymentprovider.service.ProcessTransactions;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +18,16 @@ public class ProcessTransactionsImpl implements ProcessTransactions {
     @Override
     @Scheduled(cron = "0 * * * * *")
     public void processTopupTransactionsInProgress() {
-        transactionService.processTopTransactionsInProgress(transactionService.getAllTopupTransactionsInProgress())
+        transactionService.processTopTransactionsInProgress(transactionService.getAllTransactionsByTypeAndStatus(TransactionType.TOPUP, Status.IN_PROGRESS))
                 .doOnSuccess(v -> log.warn("Topup transactions processed"))
+                .subscribe();
+    }
+
+    @Override
+    @Scheduled(cron = "0 * * * * *")
+    public void processPaymentTransactionsInProgress() {
+        transactionService.processTopTransactionsInProgress(transactionService.getAllTransactionsByTypeAndStatus(TransactionType.PAYOUT, Status.IN_PROGRESS))
+                .doOnSuccess(v -> log.warn("Payout transactions processed"))
                 .subscribe();
     }
 }

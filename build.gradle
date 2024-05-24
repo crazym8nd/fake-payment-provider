@@ -52,10 +52,10 @@ dependencies {
     testImplementation 'org.testcontainers:r2dbc'
 
     //macos
-    implementation 'io.projectreactor.netty:reactor-netty-http:1.0.39'
-    implementation 'io.projectreactor.netty:reactor-netty-core:1.0.39'
+    //implementation 'io.projectreactor.netty:reactor-netty-http:1.0.39'
+    //implementation 'io.projectreactor.netty:reactor-netty-core:1.0.39'
     // For macOS with Apple Silicon (M1)
-    runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.77.Final:osx-aarch_64'
+   // runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.77.Final:osx-aarch_64'
 }
 
 

@@ -1,6 +1,7 @@
 package com.vitaly.fakepaymentprovider.repository;
 
 import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
+import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
@@ -20,7 +21,5 @@ public interface TransactionRepository extends R2dbcRepository<TransactionEntity
     @Query("SELECT * FROM transactions WHERE transactions.account_id = :id AND transaction_type = :type AND DATE (created_at) = :date")
     Flux<TransactionEntity> findAllTransactionsForAccountByTypeAndDay(TransactionType type, LocalDate date, Long id);
 
-    Flux<TransactionEntity> findAllByTransactionTypeTopupAndStatusInProgress();
-    Flux<TransactionEntity> findAllByTransactionTypePayoutAndStatusInProgress();
-
+    Flux<TransactionEntity> findAllByTransactionTypeAndStatus(TransactionType transactionType, Status status);
 }

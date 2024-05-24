@@ -36,8 +36,12 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public Mono<CustomerEntity> saveCustomerInTransaction(CustomerEntity customerEntity) {
+    public Mono<CustomerEntity> saveCustomerForTransaction(CustomerEntity customerEntity) {
         return customerRepository.findById(customerEntity.getCardNumber())
+                .flatMap(existingCustomer -> customerRepository.save(existingCustomer.toBuilder()
+                        .updatedAt(LocalDateTime.now())
+                        .updatedBy("SYSTEM")
+                        .build()))
                 .switchIfEmpty(saveNewCustomer(customerEntity));
     }
 
@@ -45,7 +49,6 @@ public class CustomerServiceImpl implements CustomerService {
         return Mono.defer(() -> {
             CustomerEntity newCustomer = customerEntity.toBuilder()
                     .createdBy("SYSTEM")
-                    .updatedBy("SYSTEM")
                     .status(Status.ACTIVE)
                     .build();
             return customerRepository.save(newCustomer);

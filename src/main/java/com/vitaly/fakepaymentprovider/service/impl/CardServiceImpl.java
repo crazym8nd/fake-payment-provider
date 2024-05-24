@@ -37,8 +37,12 @@ public class CardServiceImpl implements CardService {
     }
 
 
-    public Mono<CardEntity> saveCardInTransaction(CardEntity cardEntity) {
+    public Mono<CardEntity> saveCardForTransaction(CardEntity cardEntity) {
         return cardRepository.findById(cardEntity.getCardNumber())
+                .flatMap(existingCard -> cardRepository.save(existingCard.toBuilder()
+                        .updatedAt(LocalDateTime.now())
+                        .updatedBy("SYSTEM")
+                        .build()))
                 .switchIfEmpty(saveNewCard(cardEntity));
     }
 
@@ -47,7 +51,6 @@ public class CardServiceImpl implements CardService {
         return Mono.defer(() -> {
             CardEntity newCard = cardEntity.toBuilder()
                     .createdBy("SYSTEM")
-                    .updatedBy("SYSTEM")
                     .status(Status.ACTIVE)
                     .build();
             return cardRepository.save(newCard);

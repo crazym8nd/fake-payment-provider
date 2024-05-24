@@ -1,6 +1,7 @@
 package com.vitaly.fakepaymentprovider.service;
 
 import com.vitaly.fakepaymentprovider.entity.TransactionEntity;
+import com.vitaly.fakepaymentprovider.entity.util.Status;
 import com.vitaly.fakepaymentprovider.entity.util.TransactionType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -15,15 +16,15 @@ public interface TransactionService extends GenericService<TransactionEntity, UU
 
     Mono<TransactionEntity> validatePayoutTransaction(TransactionEntity transactionEntity, String merchantId);
 
+
     Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndPeriod(TransactionType type, LocalDateTime startDate, LocalDateTime endDate, String merchantId);
-    Flux<TransactionEntity> getAllTopupTransactionsInProgress();
-    Flux<TransactionEntity> getAllPayoutTransactionsInProgress();
+    Flux<TransactionEntity> getAllTransactionsByTypeAndStatus(TransactionType transactionType, Status status);
 
     Flux<TransactionEntity> getAllTransactionsForMerchantByTypeAndDay(TransactionType type, LocalDate date, String merchantId);
 
     Mono<TransactionEntity> getByIdWithDetails(UUID transactionId);
     Mono<Void> processTopTransactionsInProgress(Flux<TransactionEntity> transactions);
-    Mono<TransactionEntity> processPayoutTransaction(TransactionEntity transactionEntity, String merchantId);
 
-    Mono<TransactionEntity> processTopupTransaction(TransactionEntity transactionEntity);
+
+    Mono<TransactionEntity> processTransaction(TransactionEntity transactionEntity);
 }
