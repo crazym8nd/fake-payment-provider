@@ -13,6 +13,7 @@ import com.vitaly.fakepaymentprovider.service.AccountService;
 import com.vitaly.fakepaymentprovider.service.CardService;
 import com.vitaly.fakepaymentprovider.service.CustomerService;
 import com.vitaly.fakepaymentprovider.service.TransactionService;
+import com.vitaly.fakepaymentprovider.webhook.WebhookNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -39,11 +40,13 @@ public class PaymentsControllerV1 {
     private final CardService cardService;
     private final CustomerService customerService;
     private final AccountService accountService;
+    private final WebhookNotificationService webhookNotificationService;
 
     //topups endpoints
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/topups/")
     public Mono<ResponseEntity<ResponseInProgressDto>> processTopupTransaction(@RequestBody RequestTopupTransactionDto requestTopupTransactionDto, Authentication authentication){
+
         return transactionService.validateTopupTransaction(transactionMapper.mapFromRequestTopupDto(requestTopupTransactionDto).toBuilder()
                         .transactionType(TransactionType.TOPUP).build())
                 .flatMap(validatedTransaction -> {
@@ -79,6 +82,7 @@ public class PaymentsControllerV1 {
                                 validatedTransaction.setAccountId(savedAccount.getId());
                                 return transactionService.save(validatedTransaction);
                             })
+                            .then(webhookNotificationService.createWebhook(validatedTransaction))
                             .thenReturn(response);
                 });
     }
@@ -164,7 +168,6 @@ public class PaymentsControllerV1 {
                                CardEntity savedCard = tuple.getT1();
                                CustomerEntity savedCustomer = tuple.getT2();
                                AccountEntity savedAccount = tuple.getT3();
-
                                validatedTransaction.setCardNumber(savedCard.getCardNumber());
                                validatedTransaction.setCustomer(savedCustomer);
                                validatedTransaction.setAccountId(savedAccount.getId());

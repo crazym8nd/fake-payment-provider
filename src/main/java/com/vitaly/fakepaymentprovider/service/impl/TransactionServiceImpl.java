@@ -12,7 +12,6 @@ import com.vitaly.fakepaymentprovider.exceptionhandling.RequestTopUpTransactionI
 import com.vitaly.fakepaymentprovider.mapper.CardMapper;
 import com.vitaly.fakepaymentprovider.mapper.CustomerMapper;
 import com.vitaly.fakepaymentprovider.repository.TransactionRepository;
-import com.vitaly.fakepaymentprovider.repository.WebhookRepository;
 import com.vitaly.fakepaymentprovider.service.AccountService;
 import com.vitaly.fakepaymentprovider.service.CardService;
 import com.vitaly.fakepaymentprovider.service.CustomerService;
@@ -42,7 +41,6 @@ public class TransactionServiceImpl implements TransactionService {
     private final AccountService accountService;
     private final CustomerService customerService;
     private final WebhookNotificationService webhookNotificationService;
-    private final WebhookRepository webhookRepository;
 
 
     //transactions topup
@@ -181,6 +179,9 @@ public class TransactionServiceImpl implements TransactionService {
                     .doOnSuccess(processedTransaction -> log.warn("Transaction processed successfully: {}", processedTransaction.getTransactionId()))
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
     }
+
+
+
     //transactions payout
     @Override
     public Mono<TransactionEntity> validatePayoutTransaction(TransactionEntity transactionEntity,String merchantId) {
