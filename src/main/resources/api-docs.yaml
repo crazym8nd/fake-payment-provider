@@ -1,0 +1,268 @@
+openapi: 3.0.3
+info:
+  title: fake-payment-provider-tests
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost
+paths:
+  /api/v1/payments/topups/:
+    post:
+      summary: POST mock request topup OK
+      description: POST mock request topup OK
+      operationId: postMockRequestTopupOk
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: string
+                  example: '10000'
+                card_data:
+                  type: object
+                  properties:
+                    card_number:
+                      type: string
+                      example: '4102778822334893'
+                    cvv:
+                      type: string
+                      example: '566'
+                    exp_date:
+                      type: string
+                      example: 11/23
+                created_at:
+                  type: string
+                  example: '2023-02-16T09:12:34.413'
+                currency:
+                  type: string
+                  example: USD
+                customer:
+                  type: object
+                  properties:
+                    country:
+                      type: string
+                      example: BR
+                    first_name:
+                      type: string
+                      example: John
+                    last_name:
+                      type: string
+                      example: Doe
+                language:
+                  type: string
+                  example: en
+                notification_url:
+                  type: string
+                  example: https://proselyte.net/webhook/transaction
+                payment_method:
+                  type: string
+                  example: ASD
+                updated_at:
+                  type: string
+                  example: '2023-02-16T09:12:34.413'
+            examples:
+              POST mock request topup 400:
+                value:
+                  amount: '10000'
+                  card_data:
+                    card_number: '4102778822334893'
+                    cvv: '566'
+                    exp_date: 11/23
+                  created_at: '2023-02-16T09:12:34.413'
+                  currency: USD
+                  customer:
+                    country: BR
+                    first_name: John
+                    last_name: Doe
+                  language: en
+                  notification_url: https://proselyte.net/webhook/transaction
+                  payment_method: ASD
+                  updated_at: '2023-02-16T09:12:34.413'
+              POST mock request topup OK:
+                value:
+                  amount: '10000'
+                  card_data:
+                    card_number: '4102778822334893'
+                    cvv: '566'
+                    exp_date: 11/23
+                  created_at: '2023-02-16T09:12:34.413'
+                  currency: USD
+                  customer:
+                    country: BR
+                    first_name: John
+                    last_name: Doe
+                  language: en
+                  notification_url: https://proselyte.net/webhook/transaction
+                  payment_method: CARD
+                  updated_at: '2023-02-16T09:12:34.413'
+      responses:
+        '200':
+          description: ''
+      security:
+        - basicAuth: []
+  /api/v1/payments/payout/:
+    post:
+      summary: POST mock request payout OK
+      description: POST mock request payout OK
+      operationId: postMockRequestPayoutOk
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: string
+                  example: '9999999999'
+                card_data:
+                  type: object
+                  properties:
+                    card_number:
+                      type: string
+                      example: '4102778822334893'
+                    cvv:
+                      type: string
+                      example: '566'
+                    exp_date:
+                      type: string
+                      example: 11/23
+                created_at:
+                  type: string
+                  example: '2023-02-16T09:12:34.413'
+                currency:
+                  type: string
+                  example: USD
+                customer:
+                  type: object
+                  properties:
+                    country:
+                      type: string
+                      example: BR
+                    first_name:
+                      type: string
+                      example: John
+                    last_name:
+                      type: string
+                      example: Doe
+                language:
+                  type: string
+                  example: en
+                notification_url:
+                  type: string
+                  example: https://proselyte.net/webhook/transaction
+                payment_method:
+                  type: string
+                  example: CARD
+                updated_at:
+                  type: string
+                  example: '2023-02-16T09:12:34.413'
+            examples:
+              POST mock request payout 400 Copy:
+                value:
+                  amount: '9999999999'
+                  card_data:
+                    card_number: '4102778822334893'
+                    cvv: '566'
+                    exp_date: 11/23
+                  created_at: '2023-02-16T09:12:34.413'
+                  currency: USD
+                  customer:
+                    country: BR
+                    first_name: John
+                    last_name: Doe
+                  language: en
+                  notification_url: https://proselyte.net/webhook/transaction
+                  payment_method: CARD
+                  updated_at: '2023-02-16T09:12:34.413'
+              POST mock request payout OK:
+                value:
+                  amount: '1'
+                  card_data:
+                    card_number: '4102778822334893'
+                    cvv: '566'
+                    exp_date: 11/23
+                  created_at: '2023-02-16T09:12:34.413'
+                  currency: USD
+                  customer:
+                    country: BR
+                    first_name: John
+                    last_name: Doe
+                  language: en
+                  notification_url: https://proselyte.net/webhook/transaction
+                  payment_method: CARD
+                  updated_at: '2023-02-16T09:12:34.413'
+      responses:
+        '200':
+          description: ''
+      security:
+        - basicAuth: []
+  /api/v1/payments/transaction/list:
+    get:
+      summary: GET transaction list default
+      description: GET transaction list default
+      operationId: getTransactionListDefault
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            example: '1714535453'
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            example: '1717127453'
+      responses:
+        '200':
+          description: ''
+      security:
+        - basicAuth: []
+  /api/v1/payments/payout/list:
+    get:
+      summary: GET transaction payout list default
+      description: GET transaction payout list default
+      operationId: getTransactionPayoutListDefault
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            example: 01-05-2024
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            example: 31-05-2024
+      responses:
+        '200':
+          description: ''
+      security:
+        - basicAuth: []
+  /api/v1/payments/transaction/ee55340d-8749-40f0-a1c5-de9d20df27e8/details:
+    get:
+      summary: GET transaction details
+      description: GET transaction details
+      operationId: getTransactionDetails
+      responses:
+        '200':
+          description: ''
+      security:
+        - basicAuth: []
+  /api/v1/payments/payout/ee55340d-8749-40f0-a1c5-de9d20df27e8/details:
+    get:
+      summary: GET transaction  payout details
+      description: GET transaction  payout details
+      operationId: getTransactionPayoutDetails
+      responses:
+        '200':
+          description: ''
+      security:
+        - basicAuth: []
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+tags: []
