@@ -11,5 +11,4 @@ public class FakePaymentProviderApplication {
         SpringApplication.run(FakePaymentProviderApplication.class, args);
     }
     //TODO v dto you can make public static class for embedded dtos
-    //TODO scheduled annotation job for webhooks
 }

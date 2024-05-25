@@ -26,12 +26,6 @@ public class AccountServiceImpl implements AccountService {
         return accountRepository.findById(accountId);
     }
 
-    @Override
-    public Mono<AccountEntity> update(AccountEntity accountEntity) {
-        return accountRepository.save(accountEntity.toBuilder()
-                .updatedAt(LocalDateTime.now())
-                .build());
-    }
 
     @Override
     public Mono<AccountEntity> save(AccountEntity accountEntity) {

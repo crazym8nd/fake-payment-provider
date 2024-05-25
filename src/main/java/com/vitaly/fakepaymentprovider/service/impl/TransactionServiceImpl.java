@@ -137,15 +137,10 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Mono<Void> processTopTransactionsInProgress(Flux<TransactionEntity> transactions) {
-        return transactions.flatMapSequential(this::processTransaction
-        ).then();
-    }
-
-    @Override
-    public Mono<TransactionEntity> update(TransactionEntity transactionEntity) {
-        return transactionRepository.save(transactionEntity.toBuilder()
-                .updatedAt(LocalDateTime.now())
-                .build());
+        return transactions.flatMapSequential(transaction ->
+                processTransaction(transaction)
+                        .flatMap(webhookNotificationService::createWebhook))
+                .then();
     }
 
     @Override
@@ -176,7 +171,8 @@ public class TransactionServiceImpl implements TransactionService {
                                         .updatedAt(LocalDateTime.now())
                                         .build()));
                     })
-                    .doOnSuccess(processedTransaction -> log.warn("Transaction processed successfully: {}", processedTransaction.getTransactionId()))
+                    .doOnSuccess(processedTransaction ->
+                            log.warn("Transaction processed successfully: {}", processedTransaction.getTransactionId()))
                     .doOnError(error -> log.warn("Error saving transaction: {}", error.getMessage()));
     }
 

@@ -24,13 +24,6 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public Mono<CustomerEntity> update(CustomerEntity customerEntity) {
-        return customerRepository.save(CustomerEntity.builder()
-                .updatedAt(LocalDateTime.now())
-                .build());
-    }
-
-    @Override
     public Mono<CustomerEntity> save(CustomerEntity customerEntity) {
         return customerRepository.save(customerEntity);
     }

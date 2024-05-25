@@ -12,7 +12,6 @@ import com.vitaly.fakepaymentprovider.webhook.WebhookNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -24,9 +23,7 @@ import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
@@ -40,17 +37,7 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
     private final CustomerMapper customerMapper;
 
     @Override
-    public Mono<WebhookEntity> updateWebhook(UUID transactionId) {
-        return webhookRepository.findByTransactionId(transactionId)
-                .flatMap(webhookEntity -> webhookRepository.save(webhookEntity.toBuilder()
-                        .updatedAt(LocalDateTime.now())
-                        .updatedBy("SYSTEM")
-                        .build()));
-    }
-
-    @Override
     public Mono<WebhookEntity> sendWebhook(WebhookEntity webhookEntity) {
-        //TODO need to save error response
         final AtomicLong retryCount = new AtomicLong(0L);
         return webClient.post()
                 .uri(webhookEntity.getUrlRequest())
@@ -65,6 +52,7 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
                                 .updatedAt(LocalDateTime.now())
                                 .transactionAttempt(retryCount.get())
                                 .message("OK")
+                                .status(Status.SUCCESS)
                                 .build()))
                 .onErrorResume(WebClientResponseException.class, e -> {
                     retryCount.incrementAndGet();
@@ -77,6 +65,7 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
                                .updatedAt(LocalDateTime.now())
                                .transactionAttempt(retryCount.get())
                                .message(e.getMessage())
+                               .status(Status.FAILED)
                                .build());
                    } else {
                        return Mono.error(e);
@@ -95,13 +84,8 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
     }
 
     @Override
-    public Mono<WebhookEntity> getByTransactionId(UUID transactionId) {
-        return webhookRepository.findByTransactionId(transactionId);
-    }
-
-    @Override
-    @Scheduled(cron = "*/5 * * * * *")
-    public void jobForSendingWebhooks() {
+    @Scheduled(cron = "0 * * * * *")
+    public void jobForSendingWebhooksInProgress() {
         sendWebhooks(webhookRepository.findAllByStatus(Status.IN_PROGRESS))
                 .doOnSuccess(v -> log.warn("webhooks in progress sent"))
                 .subscribe();

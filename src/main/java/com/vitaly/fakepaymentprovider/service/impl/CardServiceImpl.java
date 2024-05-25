@@ -24,12 +24,6 @@ public class CardServiceImpl implements CardService {
         return cardRepository.findById(cardNumber);
     }
 
-    @Override
-    public Mono<CardEntity> update(CardEntity cardEntity) {
-        return cardRepository.save(CardEntity.builder()
-                .updatedAt(LocalDateTime.now())
-                .build());
-    }
 
     @Override
     public Mono<CardEntity> save(CardEntity cardEntity) {
