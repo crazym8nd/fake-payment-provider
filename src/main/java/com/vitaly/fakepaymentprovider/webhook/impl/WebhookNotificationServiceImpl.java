@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -24,6 +25,8 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
@@ -48,49 +51,42 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
     @Override
     public Mono<WebhookEntity> sendWebhook(WebhookEntity webhookEntity) {
         //TODO need to save error response
-        WebClient.ResponseSpec response = webClient.post()
+        final AtomicLong retryCount = new AtomicLong(0L);
+        return webClient.post()
                 .uri(webhookEntity.getUrlRequest())
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(webhookEntity.getBodyRequest()), String.class)
-                .retrieve();
-
-        return response
-                .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> {
-                    clientResponse.toEntity(String.class)
-                            .map(responseString -> webhookEntity.toBuilder()
-                                    .updatedBy("NotificationService")
-                                    .updatedAt(LocalDateTime.now())
-                                    .message("ERROR")
-                                    .bodyResponse(responseString.getBody())
-                                    .statusResponse(responseString.getStatusCode().toString())
-                                    .build())
-                            .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
-                                    .doBeforeRetry(retrySignal -> {
-                                        log.warn("Error receiving response {}, status {}", webhookEntity.getBodyResponse(), webhookEntity.getStatusResponse());
-                                        webhookRepository.save(webhookEntity.toBuilder()
-                                                .updatedBy("NotificationService")
-                                                .updatedAt(LocalDateTime.now())
-                                                .transactionAttempt(retrySignal.totalRetries())
-                                                .build()).subscribe();
-                                    }))
-                            .subscribe();
-                    return null;
-                })
+                .bodyValue(webhookEntity.getBodyRequest())
+                .retrieve()
                 .toEntity(String.class)
-                .map(responseEntity ->
-                        webhookEntity.toBuilder()
+                .flatMap(response -> webhookRepository.save(webhookEntity.toBuilder()
+                                .bodyResponse(response.getBody())
+                                .statusResponse(response.getStatusCode().toString())
                                 .updatedBy("NotificationService")
                                 .updatedAt(LocalDateTime.now())
+                                .transactionAttempt(retryCount.get())
                                 .message("OK")
-                                .bodyResponse(responseEntity.getBody())
-                                .statusResponse(responseEntity.getStatusCode().toString())
-                                .build())
-                .onErrorResume(throwable -> Mono.just(webhookEntity.toBuilder()
-                                .message(throwable.getMessage())
-                                .build())
-                        .flatMap(webhookRepository::save))
-                .flatMap(webhookRepository::save);
+                                .build()))
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    retryCount.incrementAndGet();
+                    log.warn("Error receiving response, status: {}, retry count: {}", e.getStatusCode(), retryCount.get());
+                   if(retryCount.get() >= 3) {
+                       return webhookRepository.save(webhookEntity.toBuilder()
+                               .bodyResponse(e.getMessage())
+                               .statusResponse(String.valueOf(e.getStatusCode()))
+                               .updatedBy("NotificationService")
+                               .updatedAt(LocalDateTime.now())
+                               .transactionAttempt(retryCount.get())
+                               .message(e.getMessage())
+                               .build());
+                   } else {
+                       return Mono.error(e);
+                   }
+                })
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
+                        .doBeforeRetry(retrySignal -> retryCount.incrementAndGet()));
     }
+
+
 
     @Override
     public Mono<Void> sendWebhooks(Flux<WebhookEntity> webhooks) {
@@ -104,7 +100,7 @@ public class WebhookNotificationServiceImpl implements WebhookNotificationServic
     }
 
     @Override
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "*/5 * * * * *")
     public void jobForSendingWebhooks() {
         sendWebhooks(webhookRepository.findAllByStatus(Status.IN_PROGRESS))
                 .doOnSuccess(v -> log.warn("webhooks in progress sent"))
